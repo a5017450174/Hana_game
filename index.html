@@ -1,0 +1,1928 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>花</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;500&family=Noto+Sans+TC:wght@300;400&display=swap');
+  :root {
+    --bg:#0a0a0c; --surface:#111115; --surface2:#16161c;
+    --border:#22222e; --border-soft:#1a1a24;
+    --text-primary:#ffffff; --text-secondary:#b0b0bb; --text-muted:#8b8b93;
+    --accent:#8b7355; --accent-soft:rgba(139,115,85,0.12); --accent-glow:rgba(139,115,85,0.06);
+    --red:#8b3a3a; --locked:#2a2535; --locked-text:#3d3650;
+    --chat-self:#1c1c24; --chat-npc:#131318;
+    --ach-bg:rgba(80,120,100,0.12); --ach-color:#7aad8e;
+    --rel-high:#c0604a; --rel-mid:#8b7355; --rel-low:#3a3845;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);color:var(--text-primary);font-family:'Noto Sans TC',sans-serif;font-weight:300;overflow:hidden;}
+
+  /* ── SCREENS ── */
+  .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);z-index:100;transition:opacity 1.2s ease;}
+  .screen.fade-out{opacity:0;pointer-events:none;}
+  .screen.hidden{display:none;}
+
+  /* TITLE */
+  .title-kanji{font-family:'Noto Serif TC',serif;font-size:clamp(80px,15vw,140px);font-weight:300;letter-spacing:0.3em;opacity:0;animation:fadeUp 1.8s ease 0.3s forwards;text-shadow:0 0 80px rgba(139,115,85,0.2);}
+  .title-sub{font-size:12px;letter-spacing:0.4em;color:var(--text-muted);margin-top:24px;opacity:0;animation:fadeUp 1.8s ease 0.9s forwards;text-transform:uppercase;}
+  .title-divider{width:1px;height:60px;background:linear-gradient(to bottom,transparent,var(--border),transparent);margin:40px 0;opacity:0;animation:fadeIn 1.5s ease 1.4s forwards;}
+  .title-start{margin-top:32px;padding:12px 36px;background:transparent;border:1px solid var(--border);color:var(--text-secondary);font-family:'Noto Sans TC',sans-serif;font-size:12px;letter-spacing:0.3em;cursor:pointer;opacity:0;animation:fadeUp 1.5s ease 1.6s forwards;transition:all 0.3s ease;}
+  .title-start:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-glow);}
+
+  /* NAME INPUT */
+  .name-prompt{font-family:'Noto Serif TC',serif;font-size:13px;color:var(--text-secondary);letter-spacing:0.15em;margin-bottom:24px;opacity:0;animation:fadeUp 1.2s ease 0.2s forwards;}
+  .name-input-wrap{opacity:0;animation:fadeUp 1.2s ease 0.5s forwards;text-align:center;}
+  .name-input{background:var(--surface);border:none;border-bottom:1px solid var(--border);color:var(--text-primary);padding:10px 4px;font-size:22px;font-family:'Noto Serif TC',serif;font-weight:300;width:240px;outline:none;text-align:center;letter-spacing:0.2em;transition:border-color 0.2s;}
+  .name-input:focus{border-color:var(--accent);}
+  .name-input::placeholder{color:var(--text-muted);font-size:14px;letter-spacing:0.1em;}
+  .name-hint{font-size:11px;color:var(--text-muted);margin-top:12px;letter-spacing:0.1em;}
+  .name-btn{margin-top:36px;padding:11px 32px;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:0.3em;cursor:pointer;transition:all 0.3s;display:block;margin-left:auto;margin-right:auto;}
+  .name-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+  /* PROLOGUE */
+  .prologue-content{max-width:480px;text-align:left;padding:0 24px;opacity:0;animation:fadeUp 1.2s ease 0.2s forwards;}
+  .prologue-line{font-family:'Noto Serif TC',serif;font-size:15px;line-height:2.8;color:var(--text-secondary);font-weight:300;letter-spacing:0.05em;}
+  .prologue-line em{color:var(--text-primary);font-style:normal;}
+  .lb{display:block;height:16px;}
+  .prologue-sep{width:36px;height:1px;background:var(--border);margin:28px 0;}
+  .prologue-tagline{font-size:11px;letter-spacing:0.3em;color:var(--text-muted);}
+  .prologue-btn{margin-top:36px;padding:11px 32px;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:0.3em;cursor:pointer;transition:all 0.3s;display:block;}
+  .prologue-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+  /* ── SCENE MODE ── */
+  #scene-mode{position:fixed;inset:0;display:none;background:#000;z-index:50;overflow:hidden;}
+  #scene-mode.visible{display:block;}
+  .scene-viewport{position:relative;width:100%;height:100%;overflow:hidden;}
+  .scene-bg{position:absolute;inset:0;background-size:cover;background-position:center;transition:opacity 0.8s ease;}
+  .scene-bg.fade{opacity:0;}
+
+  /* Player character */
+  #player-char{display:none;}
+  .player-sprite{display:none;}
+
+  /* Scene objects */
+  .scene-obj{position:absolute;z-index:5;cursor:pointer;transition:all 0.3s ease;}
+  .scene-obj:not(.area-mode):hover{transform:scale(1.08);filter:brightness(1.3);}
+  .scene-obj .obj-icon{font-size:28px;filter:drop-shadow(0 0 8px rgba(139,115,85,0.4));}
+  .scene-obj .obj-label{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--accent);letter-spacing:0.1em;white-space:nowrap;opacity:0;transition:opacity 0.3s;}
+  .scene-obj:hover .obj-label{opacity:1;}
+  .scene-obj.obj-glow .obj-icon{animation:objPulse 2s ease infinite;}
+  @keyframes objPulse{0%,100%{filter:drop-shadow(0 0 6px rgba(139,115,85,0.3));}50%{filter:drop-shadow(0 0 16px rgba(139,115,85,0.7));}}
+
+  /* Hidden Scene Area Mode */
+  .scene-obj.area-mode {
+    border-radius: 6px;
+    background: transparent;
+  }
+  .scene-obj.area-mode:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+  }
+  .scene-obj.area-mode .obj-label {
+    top: 50%;
+    bottom: auto;
+    background: rgba(10, 10, 12, 0.85);
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--accent);
+    color: var(--text-primary);
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    pointer-events: none;
+  }
+
+  /* Scene nav arrows */
+  .scene-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:15;background:rgba(0,0,0,0.6);border:2px solid var(--border);color:var(--text-primary);width:64px;height:120px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:32px;transition:all 0.3s;}
+  .scene-nav:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);transform:translateY(-50%) scale(1.05);}
+  .scene-nav.left{left:20px;border-radius:8px;}
+  .scene-nav.right{right:20px;border-radius:8px;}
+
+  /* Scene UI overlay */
+  .scene-ui{position:absolute;top:0;left:0;right:0;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;z-index:20;background:linear-gradient(to bottom,rgba(0,0,0,0.6),transparent);}
+  .scene-location{font-family:'Noto Serif TC',serif;font-size:18px;color:var(--text-secondary);letter-spacing:0.15em;}
+  .scene-hint{font-size:14px;color:var(--text-muted);letter-spacing:0.1em;}
+  .phone-open-btn{background:rgba(0,0,0,0.6);border:2px solid var(--border);color:var(--text-secondary);padding:12px 24px;font-size:16px;letter-spacing:0.15em;cursor:pointer;border-radius:8px;font-family:'Noto Sans TC',sans-serif;transition:all 0.3s;display:flex;align-items:center;gap:10px;box-shadow:0 4px 12px rgba(0,0,0,0.5);}
+  .phone-open-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(139,115,85,0.25);transform:scale(1.05);}
+
+  /* Scene bottom bar */
+  .scene-bottom{position:absolute;bottom:0;left:0;right:0;padding:12px 20px;z-index:20;background:linear-gradient(to top,rgba(0,0,0,0.6),transparent);display:flex;justify-content:center;}
+  .scene-bottom-hint{font-size:14px;color:var(--text-muted);letter-spacing:0.15em;}
+
+  /* NPC in scene */
+  .scene-npc{position:absolute;bottom:16%;z-index:8;cursor:pointer;transition:all 0.3s;}
+  .scene-npc:hover{transform:scale(1.05);}
+  .scene-npc-img{width:70px;height:110px;border-radius:4px;overflow:hidden;border:2px solid transparent;transition:border-color 0.3s;}
+  .scene-npc:hover .scene-npc-img{border-color:var(--accent);}
+  .scene-npc-img img{width:100%;height:100%;object-fit:cover;}
+  .scene-npc-name{text-align:center;margin-top:6px;font-size:14px;font-weight:bold;color:var(--accent);letter-spacing:0.1em;opacity:0;transition:opacity 0.3s;}
+  .scene-npc:hover .scene-npc-name{opacity:1;}
+  
+  @keyframes pulseAlert{0%{box-shadow:0 0 0 0 rgba(139,115,85,0.7); transform:scale(1);}70%{box-shadow:0 0 0 15px rgba(139,115,85,0); transform:scale(1.15);}100%{box-shadow:0 0 0 0 rgba(139,115,85,0); transform:scale(1);}}
+  .alert-bounce{animation:pulseAlert 1.5s infinite!important; border-color:var(--accent)!important; color:var(--accent)!important;}
+
+  /* ── PHONE OVERLAY ── */
+  #phone-overlay{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);opacity:0;transition:opacity 0.4s ease;}
+  #phone-overlay.show{display:flex;opacity:1;}
+  .phone-frame{width:460px;max-width:95vw;height:90vh;max-height:850px;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.6);transition:transform 0.5s cubic-bezier(0.2,0.8,0.2,1), margin 0.5s cubic-bezier(0.2,0.8,0.2,1);z-index:60;}
+  .phone-frame.shift-right{margin-left:25vw;}
+  .phone-header{padding:14px 18px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .phone-title{font-size:14px;letter-spacing:0.3em;color:var(--text-muted);text-transform:uppercase;}
+  .phone-time{font-size:12px;color:var(--text-muted);}
+  .phone-close-btn{background:transparent;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:4px 8px;transition:color 0.2s;}
+  .phone-close-btn:hover{color:var(--text-primary);}
+
+  /* Phone contact list */
+  .phone-contacts{flex:1;overflow-y:auto;padding:8px 0;}
+  .phone-contact{display:flex;align-items:center;gap:12px;padding:12px 18px;cursor:pointer;transition:background 0.15s;position:relative;}
+  .phone-contact:hover{background:var(--surface2);}
+  .phone-contact.active{background:var(--accent-soft);}
+  .phone-contact.locked{opacity:0.4;cursor:default;}
+  .phone-contact-avatar{width:44px;height:44px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid var(--border);transition:border-color 0.2s;}
+  .phone-contact.active .phone-contact-avatar{border-color:var(--accent);}
+  .phone-contact-avatar img{width:100%;height:100%;object-fit:cover;object-position:top;}
+  .phone-contact-info{flex:1;min-width:0;}
+  .phone-contact-name{font-size:16px;color:var(--text-primary);}
+  .phone-contact.locked .phone-contact-name{color:var(--locked-text);}
+  .phone-contact-status{font-size:11.5px;color:var(--text-muted);margin-top:2px;letter-spacing:0.05em;}
+  .phone-contact-badge{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;display:none;}
+
+  /* Phone chat view */
+  .phone-chat{display:none;flex-direction:column;flex:1;min-height:0;}
+  .phone-chat.show{display:flex;}
+  .phone-chat-header{padding:12px 16px;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .phone-chat-back{background:transparent;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:4px;transition:color 0.2s;}
+  .phone-chat-back:hover{color:var(--text-primary);}
+  .phone-chat-avatar{width:48px;height:48px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid var(--border-soft);cursor:pointer;transition:border-color 0.2s;}
+  .phone-chat-avatar:hover{border-color:var(--accent);}
+  .phone-chat-avatar img{width:100%;height:100%;object-fit:cover;object-position:top;}
+  .phone-chat-name{font-size:16px;color:var(--text-primary);flex:1;}
+  .phone-chat-tag{font-size:10px;color:var(--text-muted);letter-spacing:0.1em;padding:2px 8px;border:1px solid var(--border);border-radius:10px;}
+
+  /* Portrait popup */
+  #portrait-popup{position:fixed;inset:0;background:rgba(10,10,12,0.88);display:flex;align-items:center;justify-content:center;z-index:300;opacity:0;pointer-events:none;transition:opacity 0.3s ease;cursor:pointer;}
+  #portrait-popup.show{opacity:1;pointer-events:all;}
+  .portrait-popup-inner{max-width:680px;width:95%;display:flex;gap:32px;align-items:center;background:var(--surface);padding:32px;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,0.6);text-align:left;cursor:default;}
+  .portrait-popup-img{width:280px;height:280px;border-radius:16px;object-fit:cover;object-position:top;flex-shrink:0;border:1px solid var(--border-soft);}
+  .portrait-popup-info{flex:1;}
+  .portrait-popup-name{font-size:28px;color:var(--text-primary);letter-spacing:0.1em;border-bottom:1px solid var(--border-soft);padding-bottom:12px;margin:0 0 12px 0;}
+  .portrait-popup-role{font-size:15px;color:var(--accent);letter-spacing:0.15em;margin:0;}
+  .portrait-popup-desc{font-size:16px;color:var(--text-secondary);line-height:1.6;margin-top:16px;}
+
+  .phone-messages{flex:1;min-height:0;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth;}
+  .phone-messages::-webkit-scrollbar{width:3px;}
+  .phone-messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+  .phone-input-area{padding:10px 14px;border-top:1px solid var(--border-soft);display:flex;gap:8px;align-items:flex-end;flex-shrink:0;}
+  .phone-input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text-primary);padding:10px 14px;font-size:15px;font-family:'Noto Sans TC',sans-serif;font-weight:300;resize:none;outline:none;min-height:42px;max-height:80px;border-radius:4px;transition:border-color 0.2s;letter-spacing:0.03em;line-height:1.6;}
+  .phone-input:focus{border-color:var(--accent);}
+  .phone-input::placeholder{color:var(--text-muted);}
+  .phone-input:disabled{opacity:0.4;}
+  .phone-send-btn{background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent);width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:4px;transition:all 0.2s;flex-shrink:0;}
+  .phone-send-btn:hover{background:var(--accent);color:var(--bg);}
+  .phone-send-btn:disabled{opacity:0.3;cursor:default;}
+  .phone-send-btn svg{width:14px;height:14px;}
+
+  /* Face to face dialog */
+  .face-to-face-tag{background:rgba(139,115,85,0.2);color:var(--accent);padding:2px 8px;border-radius:10px;font-size:9px;letter-spacing:0.1em;}
+
+  /* ── MESSAGES (shared) ── */
+  .msg-group{display:flex;flex-direction:column;gap:3px;opacity:0;animation:fadeUp 0.3s ease forwards;}
+  .msg-group.self{align-items:flex-end;}
+  .msg-group.npc{align-items:flex-start;}
+  .msg-bubble{max-width:74%;padding:10px 14px;font-size:15px;line-height:1.8;letter-spacing:0.03em;}
+  .msg-group.self .msg-bubble{background:var(--chat-self);border:1px solid var(--border-soft);color:var(--text-primary);border-radius:12px 2px 12px 12px;}
+  .msg-group.npc .msg-bubble{background:var(--chat-npc);border:1px solid var(--border-soft);color:var(--text-primary);border-radius:2px 12px 12px 12px;}
+  .msg-meta{display:flex;align-items:center;gap:6px;padding:0 2px;}
+  .msg-time{font-size:11px;color:var(--text-muted);letter-spacing:0.05em;}
+  .rel-tag{font-size:9px;letter-spacing:0.08em;padding:1px 6px;border-radius:8px;font-weight:400;}
+  .rel-high{background:rgba(192,96,74,0.15);color:#c0604a;border:1px solid rgba(192,96,74,0.25);}
+  .rel-mid{background:rgba(139,115,85,0.15);color:#8b7355;border:1px solid rgba(139,115,85,0.25);}
+  .rel-low{background:rgba(58,56,69,0.4);color:#5a5768;border:1px solid rgba(58,56,69,0.6);}
+
+  .typing-indicator{display:flex;gap:4px;align-items:center;padding:12px 16px;background:var(--chat-npc);border:1px solid var(--border-soft);border-radius:2px 12px 12px 12px;width:fit-content;}
+  .typing-dot{width:5px;height:5px;border-radius:50%;background:var(--text-muted);animation:typingBounce 1.2s ease infinite;}
+  .typing-dot:nth-child(2){animation-delay:0.15s;}
+  .typing-dot:nth-child(3){animation-delay:0.3s;}
+  @keyframes typingBounce{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-5px);opacity:1;}}
+
+  /* ── INFO PANEL (in phone) ── */
+  .info-tab-bar{display:flex;border-bottom:1px solid var(--border-soft);flex-shrink:0;}
+  .info-tab{flex:1;padding:12px;text-align:center;font-size:12px;letter-spacing:0.2em;color:var(--text-muted);cursor:pointer;transition:all 0.2s;border-bottom:2px solid transparent;}
+  .info-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .info-tab:hover{color:var(--text-secondary);}
+
+  .info-panel-content{flex:1;overflow-y:auto;padding:0;}
+  .info-panel-content::-webkit-scrollbar{width:3px;}
+  .info-panel-content::-webkit-scrollbar-thumb{background:var(--border);}
+  .info-section-header{padding:14px 16px 8px;font-size:9px;letter-spacing:0.4em;color:var(--text-muted);text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;}
+  .info-count{background:var(--border);color:var(--text-muted);font-size:10px;padding:2px 6px;border-radius:10px;}
+  .clue-item{padding:9px 16px;border-bottom:1px solid var(--border-soft);opacity:0;animation:fadeIn 0.4s ease forwards;}
+  .clue-dot{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--accent);margin-right:8px;vertical-align:middle;margin-bottom:1px;}
+  .clue-text{font-size:14px;color:var(--text-secondary);line-height:1.5;letter-spacing:0.03em;}
+  .clue-source{font-size:11px;color:var(--text-muted);margin-top:4px;letter-spacing:0.05em;}
+  .ach-item{margin:5px 10px;padding:9px 11px;background:var(--ach-bg);border:1px solid rgba(122,173,142,0.12);border-radius:4px;opacity:0;animation:fadeIn 0.4s ease forwards;}
+  .ach-name{font-size:11px;color:var(--ach-color);letter-spacing:0.08em;}
+  .ach-desc{font-size:10px;color:var(--text-muted);margin-top:3px;letter-spacing:0.03em;}
+  .empty-hint{padding:18px 16px;font-size:11px;color:var(--text-muted);letter-spacing:0.05em;line-height:1.8;font-style:italic;}
+
+  /* Progress bar */
+  .progress-wrap{padding:12px 16px;border-top:1px solid var(--border-soft);flex-shrink:0;}
+  .progress-label{font-size:9px;letter-spacing:0.3em;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between;}
+  .progress-bar{height:2px;background:var(--border);border-radius:2px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width 0.5s ease;}
+
+  /* ── FRAGMENT POPUP ── */
+  #fragment-popup{position:fixed;inset:0;background:rgba(10,10,12,0.92);display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity 0.4s ease;}
+  #fragment-popup.show{opacity:1;pointer-events:all;}
+  .fragment-box{max-width:460px;width:90%;background:var(--surface);border:1px solid var(--border);padding:32px 36px;position:relative;}
+  .fragment-label{font-size:10px;letter-spacing:0.4em;color:var(--text-muted);text-transform:uppercase;margin-bottom:20px;}
+  .fragment-text{font-family:'Noto Serif TC',serif;font-size:14px;line-height:2.4;color:var(--text-secondary);font-weight:300;letter-spacing:0.04em;min-height:60px;}
+  .fragment-text em{color:var(--text-primary);font-style:normal;}
+  .fragment-close{position:absolute;top:12px;right:14px;background:transparent;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:4px 8px;transition:color 0.2s;line-height:1;}
+  .fragment-close:hover{color:var(--text-primary);}
+  .fragment-loading{color:var(--text-muted);font-size:12px;letter-spacing:0.1em;}
+
+  /* ── VERDICT MODAL ── */
+  #verdict-modal{position:fixed;inset:0;background:rgba(10,10,12,0.95);display:flex;align-items:center;justify-content:center;z-index:250;opacity:0;pointer-events:none;transition:opacity 0.5s ease;}
+  #verdict-modal.show{opacity:1;pointer-events:all;}
+  .verdict-box{max-width:560px;width:92%;background:var(--surface);border:1px solid var(--border);padding:40px;}
+  .verdict-label{font-size:10px;letter-spacing:0.4em;color:var(--text-muted);text-transform:uppercase;margin-bottom:20px;}
+  .verdict-prompt{font-family:'Noto Serif TC',serif;font-size:15px;line-height:2.2;color:var(--text-secondary);margin-bottom:24px;}
+  .verdict-prompt em{color:var(--text-primary);font-style:normal;}
+  .verdict-textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text-primary);padding:14px;font-size:13px;font-family:'Noto Sans TC',sans-serif;font-weight:300;resize:none;outline:none;height:120px;letter-spacing:0.03em;line-height:1.8;transition:border-color 0.2s;}
+  .verdict-textarea:focus{border-color:var(--accent);}
+  .verdict-hint{font-size:11px;color:var(--text-muted);margin-top:10px;letter-spacing:0.05em;line-height:1.6;}
+  .verdict-btn{margin-top:20px;padding:11px 28px;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:0.3em;cursor:pointer;transition:all 0.2s;}
+  .verdict-btn:hover{background:var(--accent);color:var(--bg);}
+  .verdict-btn:disabled{opacity:0.4;cursor:default;}
+  .verdict-feedback{margin-top:16px;font-size:12px;color:var(--text-secondary);letter-spacing:0.05em;line-height:1.8;min-height:20px;}
+
+  /* ── ENDING ── */
+  #ending-overlay{position:fixed;inset:0;background:rgba(10,10,12,0.97);display:flex;align-items:center;justify-content:center;z-index:400;opacity:0;pointer-events:none;transition:opacity 1s ease;overflow-y:auto;}
+  #ending-overlay.show{opacity:1;pointer-events:all;}
+  .ending-content{max-width:580px;padding:60px 40px;text-align:center;width:90%;}
+  .ending-glyph{font-family:'Noto Serif TC',serif;font-size:44px;font-weight:300;color:var(--accent);opacity:0.5;margin-bottom:40px;display:block;}
+  .ending-text{font-family:'Noto Serif TC',serif;font-size:14.5px;line-height:2.6;color:var(--text-secondary);letter-spacing:0.05em;font-weight:300;}
+  .ending-text em{color:var(--text-primary);font-style:normal;}
+  .ending-divider{width:40px;height:1px;background:var(--border);margin:40px auto;}
+  .ending-stats{text-align:left;background:var(--surface);border:1px solid var(--border-soft);padding:24px 28px;margin:0 auto;}
+  .ending-stats-title{font-size:9px;letter-spacing:0.4em;color:var(--text-muted);text-transform:uppercase;margin-bottom:16px;}
+  .stat-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-soft);font-size:12px;}
+  .stat-row:last-child{border-bottom:none;}
+  .stat-label{color:var(--text-muted);letter-spacing:0.05em;}
+  .stat-value{color:var(--text-primary);font-family:'Noto Serif TC',serif;}
+  .rel-bars{display:flex;gap:4px;margin-top:12px;}
+  .rel-bar-wrap{flex:1;text-align:center;}
+  .rel-bar-track{height:40px;background:var(--border-soft);border-radius:2px;overflow:hidden;display:flex;align-items:flex-end;}
+  .rel-bar-fill{width:100%;transition:height 0.8s ease;border-radius:2px;}
+  .rel-bar-fill.high{background:var(--rel-high);}
+  .rel-bar-fill.mid{background:var(--rel-mid);}
+  .rel-bar-fill.low{background:#3a3845;}
+  .rel-bar-label{font-size:9px;color:var(--text-muted);margin-top:4px;letter-spacing:0.05em;}
+  .rel-bar-pct{font-size:10px;color:var(--text-secondary);margin-top:2px;}
+  .ending-personality{margin-top:8px;text-align:left;background:var(--surface);border:1px solid var(--border-soft);padding:24px 28px;}
+  .ending-personality-title{font-size:9px;letter-spacing:0.4em;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px;}
+  .ending-personality-text{font-family:'Noto Serif TC',serif;font-size:13.5px;line-height:2.4;color:var(--text-secondary);}
+  .ending-personality-text em{color:var(--text-primary);font-style:normal;}
+  .ending-close{margin-top:40px;background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:10px 32px;font-size:11px;letter-spacing:0.3em;cursor:pointer;transition:all 0.2s;font-family:'Noto Sans TC',sans-serif;}
+  .ending-close:hover{border-color:var(--accent);color:var(--accent);}
+
+  /* ── TOAST ── */
+  #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--surface2);border:1px solid var(--accent);color:var(--accent);padding:10px 22px;font-size:11px;letter-spacing:0.2em;pointer-events:none;opacity:0;transition:all 0.4s ease;z-index:500;text-align:center;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* ── LORE MODAL ── */
+  #lore-modal{position:fixed;inset:0;background:rgba(10,10,12,0.92);display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity 0.4s ease;}
+  #lore-modal.show{opacity:1;pointer-events:all;}
+  .lore-box{max-width:500px;width:90%;background:var(--surface);border:1px solid var(--border);padding:40px 40px 36px;position:relative;max-height:80vh;overflow-y:auto;}
+  .lore-box::-webkit-scrollbar{width:3px;}
+  .lore-label{font-size:14px;letter-spacing:0.4em;color:var(--text-muted);text-transform:uppercase;margin-bottom:28px;}
+  .lore-text{font-family:'Noto Serif TC',serif;font-size:18px;line-height:2.6;color:var(--text-secondary);font-weight:300;letter-spacing:0.04em;}
+  .lore-text em{color:var(--text-primary);font-style:normal;}
+  .lore-tagline{font-size:11px;letter-spacing:0.3em;color:var(--text-muted);margin-top:28px;padding-top:20px;border-top:1px solid var(--border-soft);}
+  .lore-close{position:absolute;top:14px;right:16px;background:transparent;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:4px 8px;transition:color 0.2s;line-height:1;}
+  .lore-close:hover{color:var(--text-primary);}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+  *{scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+</style>
+</head>
+<body>
+  
+<!-- TITLE -->
+<div id="title-screen" class="screen">
+  <div class="title-kanji">花</div>
+  <div class="title-sub">Hana · 2025.01.16</div>
+  <div class="title-divider"></div>
+  <button class="title-start" onclick="goToName()">開始</button>
+</div>
+
+<!-- NAME INPUT -->
+<div id="name-screen" class="screen hidden">
+  <div class="name-prompt">你叫什麼名字？</div>
+  <div class="name-input-wrap">
+    <input class="name-input" id="player-name-input" placeholder="輸入你的名字" maxlength="10" />
+    <div class="name-hint">按 Enter 或點下方繼續</div>
+    <button class="name-btn" onclick="goToPrologue()">繼續</button>
+  </div>
+</div>
+
+<!-- PROLOGUE -->
+<div id="prologue-screen" class="screen hidden">
+  <div class="prologue-content">
+    <div class="prologue-line">
+      小花、思妤、柏宇和你——<br>
+      高中時陰錯陽差認識的朋友，<em>一認識就是最好的那種。</em>
+      <span class="lb"></span>
+      小花大方、負責任，在科技公司工作。<br>
+      思妤是開心果，心思卻最細膩，是個喜歡寫作的會計師。<br>
+      柏宇以前常陪你打球，現在是攝影工作室的老闆。
+      <span class="lb"></span>
+      畢業那麼久了，你們一年還是會聚一兩次。<br>
+      那個裝滿白癡對話和爛梗圖的群組，一直都還在。
+      <span class="lb"></span>
+      <em>直到今天。</em>
+    </div>
+    <div class="prologue-sep"></div>
+    <div class="prologue-line">
+      2025年1月16日<br>
+      你打開手機，發現群組裡少了一個人。<br>
+      小花無聲無息地退出了群組。<br>
+      同時，她也封鎖了你。
+      <span class="lb"></span>
+      你不知道為什麼。<br>
+      但你覺得，你應該要想辦法知道。
+    </div>
+    <div class="prologue-sep"></div>
+    <div class="prologue-tagline">自由對話，蒐集線索，拼出真相。</div>
+    <button class="prologue-btn" onclick="startGame()">進入</button>
+  </div>
+</div>
+
+<!-- SCENE MODE -->
+<div id="scene-mode">
+  <div class="scene-viewport" id="scene-viewport">
+    <div class="scene-bg" id="scene-bg"></div>
+    <div id="scene-objects"></div>
+    <div id="player-char"><div class="player-sprite"></div></div>
+    <div id="scene-npcs"></div>
+  </div>
+  <div class="scene-ui">
+    <div>
+      <div class="scene-location" id="scene-location">你的房間</div>
+      <div class="scene-hint" id="scene-time">2025 / 01 / 16 · 傍晚</div>
+    </div>
+    <button class="phone-open-btn" id="scene-phone-open-btn" onclick="openPhone()">📱 手機</button>
+  </div>
+  <button class="scene-nav left" id="nav-left" onclick="changeScene(-1)">◂</button>
+  <button class="scene-nav right" id="nav-right" onclick="changeScene(1)">▸</button>
+  <div class="scene-bottom"><div class="scene-bottom-hint">點擊發光的物品互動 · 按方向鍵或點擊箭頭切換場景</div></div>
+</div>
+
+<!-- PHONE OVERLAY -->
+<div id="phone-overlay">
+  <!-- VN Sprite Container -->
+  <div id="vn-sprite-container" style="position:absolute; left:0; bottom:0; padding-left:8vw; display:none; align-items:flex-end; z-index:55; pointer-events:none; transition:opacity 0.3s ease;">
+    <img id="vn-character-sprite" src="" style="height:88vh; max-height:850px; object-fit:contain; filter:drop-shadow(0 0 40px rgba(0,0,0,0.6)); pointer-events:auto; transition: opacity 0.3s;" />
+  </div>
+
+  <div class="phone-frame" id="phone-frame">
+    <div class="phone-header" id="phone-header">
+      <span class="phone-title">訊息</span>
+      <span class="phone-time" id="phone-clock">18:42</span>
+      <button class="phone-close-btn" onclick="closePhone()">✕</button>
+    </div>
+    <!-- Contact list view -->
+    <div id="phone-contact-list" class="phone-contacts"></div>
+    <!-- Chat view -->
+    <div id="phone-chat-view" class="phone-chat">
+      <div class="phone-chat-header">
+        <button class="phone-chat-back" onclick="backToContacts()">←</button>
+        <div class="phone-chat-avatar" id="phone-chat-avatar" onclick="showPortrait()"><img src="" /></div>
+        <div class="phone-chat-name" id="phone-chat-name"></div>
+        <div class="phone-chat-tag" id="phone-chat-tag"></div>
+      </div>
+      <div class="phone-messages" id="phone-messages"></div>
+      <div id="face-to-face-hint" style="display:none;padding:14px 16px;text-align:center;font-size:12px;color:var(--text-muted);letter-spacing:0.08em;border-top:1px solid var(--border-soft);font-family:'Noto Serif TC',serif;">我想我可能當面去找他聊比較好。</div>
+      <div class="phone-input-area" id="phone-input-area">
+        <textarea class="phone-input" id="phone-input" placeholder="傳訊息…" rows="1"></textarea>
+        <button class="phone-send-btn" id="phone-send-btn" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
+    </div>
+    <!-- Info tab view -->
+    <div id="phone-info-view" style="display:none;flex-direction:column;height:100%;">
+      <div class="info-panel-content" id="info-panel-content">
+        <div id="ach-list" style="display:block;"><div class="empty-hint">—</div></div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span>破案進度</span>
+          <span id="progress-text">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+        <button class="phone-send-btn" style="width:100%;margin-top:12px;border-radius:4px;font-size:11px;letter-spacing:0.2em;cursor:pointer;padding:8px;background:var(--accent);color:var(--bg);" onclick="startManualVerdict()">進入最終作答</button>
+      </div>
+    </div>
+    <!-- Bottom nav -->
+    <div style="display:flex;border-top:1px solid var(--border-soft);flex-shrink:0;">
+      <button style="flex:1;padding:12px;background:transparent;border:none;color:var(--text-muted);font-size:14px;letter-spacing:0.2em;cursor:pointer;font-family:'Noto Sans TC',sans-serif;" onclick="showPhoneView('contacts')" id="nav-msg-btn">💬 訊息</button>
+      <button style="flex:1;padding:12px;background:transparent;border:none;color:var(--text-muted);font-size:14px;letter-spacing:0.2em;cursor:pointer;font-family:'Noto Sans TC',sans-serif;" onclick="showPhoneView('info')" id="nav-info-btn">📋 已解鎖線索</button>
+      <button style="flex:1;padding:12px;background:transparent;border:none;color:var(--text-muted);font-size:14px;letter-spacing:0.2em;cursor:pointer;font-family:'Noto Sans TC',sans-serif;" onclick="openLore()">📖 故事</button>
+    </div>
+  </div>
+</div>
+
+<!-- PORTRAIT POPUP -->
+<div id="portrait-popup" onclick="closePortrait()">
+  <div class="portrait-popup-inner" onclick="event.stopPropagation()">
+    <img class="portrait-popup-img" id="portrait-popup-img" src="" />
+    <div class="portrait-popup-info">
+      <div class="portrait-popup-name" id="portrait-popup-name"></div>
+      <div class="portrait-popup-role" id="portrait-popup-role"></div>
+      <div class="portrait-popup-desc" id="portrait-popup-desc"></div>
+    </div>
+  </div>
+</div>
+
+<!-- FRAGMENT POPUP -->
+<div id="fragment-popup">
+  <div class="fragment-box">
+    <button class="fragment-close" onclick="closeFragment()">✕</button>
+    <div class="fragment-label" id="fragment-label">回憶碎片</div>
+    <div class="fragment-text" id="fragment-text"></div>
+  </div>
+</div>
+
+<!-- LORE MODAL -->
+<div id="lore-modal">
+  <div class="lore-box">
+    <button class="lore-close" onclick="closeLore()">✕</button>
+    <div class="lore-label">故事設定</div>
+    <div class="lore-text">
+      小花、思妤、柏宇和你——<br>
+      高中時陰錯陽差認識的朋友，<em>一認識就是最好的那種。</em>
+      <span class="lb"></span>
+      <em>小花</em>大方、負責任，在科技公司工作。<br>
+      <em>思妤</em>是開心果，心思卻最細膩，是個喜歡寫作的會計師。<br>
+      <em>柏宇</em>以前常陪你打球，現在是攝影工作室的老闆。
+      <span class="lb"></span>
+      畢業那麼久了，你們一年還是會聚一兩次。<br>
+      那個裝滿白癡對話和爛梗圖的群組，一直都還在。
+      <span class="lb"></span>
+      <em>直到今天。</em>
+      <span class="lb"></span>
+      2025年1月16日，你打開手機，發現小花無聲無息地退出了群組。<br>
+      同時，她也封鎖了你。
+      <span class="lb"></span>
+      你不知道為什麼。<br>
+      但你覺得，你應該要想辦法知道。
+    </div>
+    <div class="lore-tagline">自由對話，蒐集線索，拼出真相。</div>
+  </div>
+</div>
+
+<!-- VERDICT MODAL -->
+<div id="verdict-modal">
+  <div class="verdict-box" id="verdict-box-container">
+    <!-- Injected by renderVerdictStep() -->
+  </div>
+</div>
+
+<!-- ENDING -->
+<div id="ending-overlay">
+  <div class="ending-content">
+    <span class="ending-glyph">花</span>
+    <div class="ending-text">
+      那晚你說<em>「其實那個悲劇的主角你也認識」</em>，<br>
+      然後故作神秘，等他逼問。<br><br>
+      那一刻，你有沒有享受那種感覺？<br><br>
+      你知道一個秘密。<br>
+      那個秘密讓你顯得跟小花很親近，<br>
+      讓你在那個熱鬧的慶功宴上，突然變得有點特別。<br><br>
+      你說<em>「不要跟她說喔」</em>。<br><br>
+      但你說這句話的時候，<br>
+      你真的以為他不會說嗎？<br><br>
+      她告訴你媽媽的事，<br>
+      不只是因為信任你。<br><br>
+      她以為那種親近是對等的。
+    </div>
+    <div class="ending-divider"></div>
+    <div class="ending-stats" id="ending-stats">
+      <div class="ending-stats-title">你的偵探報告</div>
+      <div class="stat-row"><span class="stat-label">玩家名稱</span><span class="stat-value" id="stat-name">—</span></div>
+      <div class="stat-row"><span class="stat-label">總共說了</span><span class="stat-value" id="stat-total">—</span></div>
+      <div class="rel-bars">
+        <div class="rel-bar-wrap"><div class="rel-bar-track"><div class="rel-bar-fill high" id="bar-high" style="height:0%"></div></div><div class="rel-bar-label">高相關</div><div class="rel-bar-pct" id="pct-high">0%</div></div>
+        <div class="rel-bar-wrap"><div class="rel-bar-track"><div class="rel-bar-fill mid" id="bar-mid" style="height:0%"></div></div><div class="rel-bar-label">中相關</div><div class="rel-bar-pct" id="pct-mid">0%</div></div>
+        <div class="rel-bar-wrap"><div class="rel-bar-track"><div class="rel-bar-fill low" id="bar-low" style="height:0%"></div></div><div class="rel-bar-label">弱相關</div><div class="rel-bar-pct" id="pct-low">0%</div></div>
+      </div>
+    </div>
+    <div class="ending-personality" id="ending-personality" style="display:none;">
+      <div class="ending-personality-title">關於你這個人</div>
+      <div class="ending-personality-text" id="personality-text">分析中…</div>
+    </div>
+    <button class="ending-close" id="default-ending-close" onclick="closeEnding()">關閉</button>
+    <div id="ending-congrats" style="display:none; text-align:center; margin-top:60px; padding-top:40px; border-top:1px solid var(--border-soft);">
+      <div style="font-size:28px; color:var(--accent); font-family:'Noto Serif TC',serif; letter-spacing:0.2em; margin-bottom:16px; font-weight:300;">恭喜通關</div>
+      <div style="font-size:13px; color:var(--text-secondary); letter-spacing:0.1em; margin-bottom:32px;">感謝你的遊玩。真相已大白，所有的回憶依然為你保留。</div>
+      <div style="display:flex; justify-content:center; gap:12px;">
+        <button class="ending-close" onclick="closeEnding()" style="margin-top:0;">返回手機查閱紀錄</button>
+        <button class="ending-close" onclick="downloadGameLog()" style="margin-top:0; background:var(--accent); color:#000;">下載遊戲紀錄 (.txt)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────
+const API_KEY = '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';
+const MODEL = 'claude-sonnet-4-20250514';
+
+// ── PORTRAITS ─────────────────────────────────────────────────────────
+const PORTRAITS = {
+  siyu: 'assets/images/portrait_siyu.png',
+  boyu: 'assets/images/portrait_boyu2.jpg',
+  kai:  'assets/images/portrait_kai.png',
+  hana: 'assets/images/portrait_hana.png'
+};
+const SCENE_BGS = {
+  room:   'assets/images/background/bg_room.png',
+  park:   'assets/images/background/bg_park.png',
+  studio: 'assets/images/background/bg_studio.jpg'
+};
+
+const AUDIO_FILES = {
+  intro: 'assets/audio/開頭的音樂.mp3',
+  room: 'assets/audio/你的房間_環境音.mp3',
+  park: 'assets/audio/公園_環境音.mp3',
+  studio: 'assets/audio/柏宇工作室_環境音.mp3',
+  relevance: 'assets/audio/文字相關的音樂.mp3',
+  verdict: 'assets/audio/玩家要做答的時候播放的音樂.mp3',
+  msgSend: 'assets/audio/玩家傳送訊息.mp3',
+  msgReceive: 'assets/audio/收到訊息.mp3'
+};
+
+class GameAudioManager {
+  constructor() {
+    this.bgm = new Audio();
+    this.bgm.loop = true;
+    
+    this.ambient = new Audio();
+    this.ambient.loop = true;
+    
+    this.relevance = new Audio();
+    this.relevance.loop = true;
+
+    this.relevanceTimer = null;
+    this.currentAmbientState = 'normal'; // normal, faded
+  }
+
+  fade(audioElement, targetVol, durationMS) {
+    if(!audioElement) return;
+    const startVol = audioElement.volume;
+    const diff = targetVol - startVol;
+    const steps = 20;
+    const stepTime = durationMS / steps;
+    const stepVol = diff / steps;
+    
+    if(audioElement.fadeInterval) clearInterval(audioElement.fadeInterval);
+    
+    if (targetVol > 0 && audioElement.paused) {
+      audioElement.play().catch(e=>console.log("Audio play blocked", e));
+    }
+
+    let currentStep = 0;
+    audioElement.fadeInterval = setInterval(() => {
+      currentStep++;
+      let newVol = startVol + (stepVol * currentStep);
+      // clamp
+      if(newVol < 0) newVol = 0;
+      if(newVol > 1) newVol = 1;
+      
+      audioElement.volume = newVol;
+      
+      if(currentStep >= steps) {
+        clearInterval(audioElement.fadeInterval);
+        audioElement.volume = targetVol;
+        if(targetVol === 0) {
+          audioElement.pause();
+        }
+      }
+    }, stepTime);
+  }
+
+  playIntro() {
+    this.bgm.src = AUDIO_FILES.intro;
+    this.bgm.currentTime = 0;
+    this.bgm.volume = 0;
+    this.fade(this.bgm, 1.0, 1500);
+  }
+
+  playSendSfx() {
+    new Audio(AUDIO_FILES.msgSend).play().catch(()=>{});
+  }
+
+  playReceiveSfx() {
+    new Audio(AUDIO_FILES.msgReceive).play().catch(()=>{});
+  }
+
+  crossfadeAmbient(sceneKey) {
+    // If intro BGM is running, fade it out
+    if (this.bgm.src.includesURI || (this.bgm.src && this.bgm.volume > 0)) {
+      if(this.bgm.src && !this.bgm.src.includes('做答')) {
+        this.fade(this.bgm, 0, 1500);
+      }
+    }
+
+    const nextSrc = AUDIO_FILES[sceneKey];
+    if (!nextSrc || this.ambient.src.endsWith(encodeURI(nextSrc.split('/').pop()))) return;
+    
+    const oldAmbient = this.ambient;
+    const newAmbient = new Audio(nextSrc);
+    newAmbient.loop = true;
+    newAmbient.volume = 0;
+    
+    if (this.currentAmbientState === 'normal') {
+      this.fade(newAmbient, 1.0, 1500);
+    } else {
+      newAmbient.volume = 0; 
+      newAmbient.play().catch(()=>{});
+    }
+
+    if (oldAmbient.src && oldAmbient.volume > 0) {
+      this.fade(oldAmbient, 0, 1500);
+      setTimeout(() => {
+        oldAmbient.pause();
+        oldAmbient.src = '';
+      }, 1600);
+    }
+    
+    this.ambient = newAmbient;
+  }
+
+  triggerRelevance(level) {
+    if (level === 'low') return;
+
+    if (!this.relevance.src) {
+      this.relevance.src = AUDIO_FILES.relevance;
+      this.relevance.volume = 0;
+    }
+
+    if (this.relevanceTimer) clearTimeout(this.relevanceTimer);
+
+    if (level === 'mid') {
+      this.fade(this.relevance, 0.25, 2000); 
+      if (this.currentAmbientState !== 'mid') {
+          this.fade(this.ambient, 0.7, 2000); // 0.7 is roughly -3dB
+          this.currentAmbientState = 'mid';
+      }
+    } else if (level === 'high') {
+      this.fade(this.relevance, 0.5, 5000);
+      if (this.currentAmbientState !== 'faded') {
+          this.fade(this.ambient, 0, 5000);
+          this.currentAmbientState = 'faded';
+      }
+    }
+
+    this.relevanceTimer = setTimeout(() => {
+      this.fade(this.relevance, 0, 5000); // Extended fade out to 5 seconds
+      if (this.currentAmbientState !== 'normal') {
+        this.fade(this.ambient, 1.0, 5000); // Ambient smoothly goes back to normal over 5s
+        this.currentAmbientState = 'normal';
+      }
+    }, 20000);
+  }
+
+  playVerdict() {
+    this.fade(this.ambient, 0, 2000);
+    this.fade(this.relevance, 0, 2000);
+    if(this.relevanceTimer) clearTimeout(this.relevanceTimer);
+
+    this.bgm.src = AUDIO_FILES.verdict;
+    this.bgm.currentTime = 0;
+    this.bgm.volume = 0;
+    this.fade(this.bgm, 1.0, 3000); 
+  }
+
+  stopAllForEnding() {
+    this.fade(this.bgm, 0, 5000); 
+    this.fade(this.ambient, 0, 5000);
+    this.fade(this.relevance, 0, 5000);
+  }
+}
+
+const AudioCtrl = new GameAudioManager();
+
+// ── PLAYER STATE ──────────────────────────────────────────────────────
+let playerName = '你';
+let currentNpc = null;
+let chatHistories = { siyu:[], boyu:[], kai:[], hana:[] };
+let clues = [];
+let achievements = [];
+let isLoading = false;
+let npcTyping = { siyu:false, boyu:false, kai:false, hana:false };
+let endingTriggered = false;
+let verdictPassed = false;
+let currentScene = 0; // 0=room, 1=park, 2=studio
+const SCENE_NAMES = ['你的房間','公園','柏宇的工作室'];
+let phoneView = 'contacts'; // contacts | chat | info
+let phoneChatTarget = null;
+let isFaceToFace = false;
+
+// relevance tracking
+let allPlayerMessages = [];
+let relCounts = { high:0, mid:0, low:0 };
+let consecutiveLowCount = { siyu: 0, boyu: 0, kai: 0 };
+
+// 記錄每個成就是由哪個 NPC 觸發的（用於顯示不同描述與分組）
+let achievementSources = {};
+
+// REQUIRED ACHIEVEMENTS (13 required for verdict, si_wavered is hidden/optional)
+const REQUIRED_ACHIEVEMENTS = [
+  'si_that_night', 'si_kaisaid', 'kai_unlocked', 'si_layer3', 'si_collapse',
+  'bo_not_blocked', 'bo_found_hana', 'bo_full', 'bo_hana_loved_you',
+  'kai_full_truth', 'kai_ate_with_hana', 'kai_insurance', 'kai_slipped'
+];
+const TOTAL_REQUIRED = REQUIRED_ACHIEVEMENTS.length;
+
+const ACH_META = {
+  si_that_night:     { name:'那晚',     desc:'得知慶功宴那晚有些不對勁',     desc_siyu:'思妤說出了慶功宴那晚有些不自然',   desc_boyu:'從柏宇口中得知那晚的狀況',     npc:'siyu' },
+  si_kaisaid:        { name:'誰也在',   desc:'得知小楷那晚也在場',           desc_siyu:'思妤說出了那晚小楷也在場',         desc_boyu:'柏宇提到小楷那晚也出席了',     npc:'siyu' },
+  kai_unlocked:      { name:'想起來了', desc:'得知小楷這個人的存在',         desc_siyu:'思妤說出了「小楷」這個名字',       desc_boyu:'柏宇提起了小楷這個人',         npc:'siyu' },
+  si_layer3:         { name:'好啦，我有看到',       desc:'思妤承認當晚有看到你們咬耳朵講悄悄話', npc:'siyu' },
+  si_collapse:       { name:'眼淚',                 desc:'她把覺得自己是沉默幫兇的愧疚感全盤托出', npc:'siyu' },
+  si_wavered:        { name:'怦然 ❤️',              desc:'專屬結局：展現包容與真誠，讓她徹底卸下武裝', npc:'siyu' },
+  bo_not_blocked:    { name:'他沒有被封鎖',         desc:'柏宇其實沒有被小花封鎖', npc:'boyu' },
+  bo_found_hana:     { name:'見面',                 desc:'柏宇前天就去找過小花', npc:'boyu' },
+  bo_full:           { name:'謝謝',                 desc:'柏宇轉述小花決定退群的原因：不想折磨自己', npc:'boyu' },
+  bo_hana_loved_you: { name:'重視',                 desc:'揭露小花當初對你是有好感的秘密', npc:'boyu' },
+  kai_full_truth:    { name:'也很正常啦',           desc:'小楷覺得小花不讀不回應該是被封鎖了', npc:'kai' },
+  kai_ate_with_hana: { name:'只是吃個飯',           desc:'小楷後來私下約了小花去吃飯', npc:'kai' },
+  kai_insurance:     { name:'工作',                 desc:'小楷約吃飯是為了幫小花推銷保單', npc:'kai' },
+  kai_slipped:       { name:'加護病房',             desc:'小楷承認推銷時脫口而出加護病房的事', npc:'kai' },
+};
+
+const NPC_HINTS = {
+  siyu: [
+    { req: '!si_that_night', text: '試著問問看「那晚」發生了什麼事？' },
+    { req: '!kai_unlocked', text: '思妤好像有注意到你那天和誰講話?' },
+    { req: '!si_layer3', text: '悄悄話? 她好像有事情瞞著你？' },
+    { req: '!si_collapse', text: '這件事對她的打擊一定很大，誠懇的問問看?' }
+  ],
+  boyu: [
+    { req: '!bo_not_blocked', text: '柏宇的反應有點奇怪，他也被封鎖了嗎' },
+    { req: '!bo_found_hana', text: '他似乎知道得比你多？他有跟小花聯繫嗎?' },
+    { req: '!bo_full', text: '他既然見過小花，小花應該有跟他說為什麼退群吧？' },
+    { req: '!bo_hana_loved_you', text: '對小花來說 你好像有點特別?' }
+  ],
+  kai: [
+    { req: '!kai_ate_with_hana', text: '他說感覺被封鎖很正常，那他們之後是有見過面嗎?' },
+    { req: '!kai_insurance', text: '小楷是業務員，他私下找小花吃飯，會不會是為了「推銷保單/保險」？' },
+    { req: '!kai_slipped', text: '他似乎說了不該說的話，然後小花面有難色?' }
+  ]
+};
+
+window.requestHint = function(id) {
+  let hintGiven = false;
+  if (NPC_HINTS[id]) {
+    for (let h of NPC_HINTS[id]) {
+      const inv = h.req.startsWith('!');
+      const ach = inv ? h.req.substring(1) : h.req;
+      const hasAch = achievements.includes(ach);
+      if ((inv && !hasAch) || (!inv && hasAch)) {
+        appendPhoneMsg('npc', '💡 ' + h.text, null, true, '系統');
+        hintGiven = true;
+        break;
+      }
+    }
+  }
+  if (!hintGiven) {
+    appendPhoneMsg('npc', '💡 此人已沒有任何線索可以推理，繼續調查其他人吧！', null, true, '系統');
+  }
+  scrollPhoneBottom();
+};
+
+// SCENE OBJECTS
+const SCENE_OBJECTS = {
+  room: [
+    { id:'photo1', label:'慶功宴合照', x:'55%', y:'18%', w:'8%', h:'26%', text:'沒想到我的工作室經營一年了 勉強活下來的倖存者慶功宴!\n好多合作夥伴都有來呢... 如果思妤沒有幫我會計的事情我想我虧多少賺多少我也不知道吧哈' },
+    { id:'photo2', label:'出遊照片', x:'64%', y:'18%', w:'8%', h:'26%', text:'前年和同事們去的日本 滑雪就是爽' },
+    { id:'guitar', label:'吉他',      x:'47%', y:'15%', w:'7%', h:'42%', text:'高一的時候為了學吉他跟家人拜託多久才買 還買單板的，雖然幾乎沒在彈了但也是個美好也難忘的回憶，必須掛起來' },
+    { id:'book',   label:'書架',      x:'28%', y:'60%', w:'13%', h:'19%', text:'原子習慣、毒性羞恥、那瓦爾寶典、還有一些沒整理好的文件...' },
+    { id:'desk',   label:'桌上手機',  x:'26%', y:'56%', w:'3%', h:'5%', prompt:'phone', isPhone:true },
+  ],
+  park: [
+    { id:'bench',  label:'長椅',  x:'52%', y:'54%', w:'32%', h:'20%', text:'小花怎麼悄無聲息的退群...? 怎麼會這樣啊(仰望)' },
+    { id:'moon',   label:'月亮',  x:'27.5%', y:'14.5%', w:'3.5%', h:'4.5%', text:'也許換個角度想或是問問看?' },
+  ],
+  studio: [
+    { id:'wall_photos', label:'照片牆', x:'42%', y:'28%', w:'5%', h:'26%', text:'形形色色的人們在柏宇的鏡頭中，總是那麼鮮明...\n「看過太多有故事的眼神之後 我想我就是想為那些眼神而拍的」，有點中二但又有點帥，可惡每次都會被他裝了一波B' },
+    { id:'camera',      label:'相機',   x:'11%', y:'60%', w:'15%', h:'15%', text:'實事求是又認真的柏宇在研究這些機型上面也是很有心得的' },
+    { id:'boyu_npc', label:'陳柏宇', x:'35%', y:'20%', w:'25%', h:'70%', isNpc:'boyu' }
+  ]
+};
+
+// ── NPC DATA ──────────────────────────────────────────────────────────
+function buildNpcs() {
+  const n = playerName;
+  return {
+    siyu: {
+      id:'siyu', name:'吳思妤', role:'會計師', avatar:'妤', locked:false, status:'上線中', canChat:true, desc:'26歲，在信義區擔任會計師。平常是朋友圈最ㄎㄧㄤ的嗨咖，什麼都能笑，什麼話都敢說。但其實心思細膩，對細節非常講究，有時候也很ㄍㄧㄥ也有裝傻的時候。',
+      portrait: PORTRAITS.siyu,
+      sprites:{
+        smile: 'assets/images/siyu/smile.jpg',
+        shy: 'assets/images/siyu/shy.jpg',
+        worry: 'assets/images/siyu/worry.jpg',
+        angry: 'assets/images/siyu/angry.jpg',
+        confused: 'assets/images/siyu/confused.jpg',
+        disgust: 'assets/images/siyu/disgust.jpg',
+        shock: 'assets/images/siyu/shock.jpg',
+        conquered: 'assets/images/siyu/conquered.jpg'
+      },
+      systemPrompt:`你是吳思妤，26歲，會計師。平常是朋友圈最ㄎㄧㄤ的嗨咖，什麼都能笑，什麼話都敢說。但其實心思最細膩敏感。
+
+【世界觀中只有以下角色，絕對不能發明其他角色】
+${n}（玩家）、小花（花語安）、你（思妤）、柏宇（陳柏宇）、小楷。沒有其他人。不存在「阿Bo」或任何其他角色。
+重要人稱限制：現在正在和你傳訊息的人就是 ${n} 本人。對話時請直接用「你」來稱呼對方，絕對不要用「${n}」來當作第三人稱稱呼（例如：不要說「Alvis跟我說」，要說「你跟我說」）。
+
+【慶功宴是什麼】
+2024年2月，${n}的工作室辦了一場慶功宴。你平常有幫${n}的工作室處理會計事務，所以也在場。小楷是${n}的合作夥伴，也在場。小花和柏宇沒有出席。那是一場普通的工作慶功宴，不是為任何特定的人慶祝。
+
+【關於小花家裡的事】
+小花之前有跟大家說過「家裡有狀況」，但沒有說明具體細節。完整細節（爸爸外遇、媽媽住院等）小花只告訴了${n}一個人。你不知道小花家裡具體發生了什麼。
+
+【你確定玩家在說小花的事】
+慶功宴那晚，你看到${n}附耳對小楷說悄悄話時，你看到了${n}嘴型說出「小花」兩個字，然後小楷表情很驚訝。所以你確定${n}在說小花的事。但你沒有聽到具體內容，不知道${n}說了什麼細節。
+
+【現在是什麼時間點】
+今天是2025年1月16日。你發現小花退出群組封鎖了所有人。
+你帶著愧疚——小花當晚根本不在慶功宴，但你看到${n}在跟小楷咬耳朵時說出「小花」兩個字。你發現事態不對但選擇沒問，因為你怕群組散掉。這一年你看著小花越來越安靜，你直覺肯定跟那晚${n}偷說的秘密有關，但你一句話都沒說。
+
+【你現在知道什麼／不知道什麼】
+✓ 慶功宴那晚，你看到${n}附耳對小楷說悄悄話，看到嘴型說出「小花」，小楷很驚訝
+✓ 你確定${n}在說小花的事，但不知道說了什麼具體內容
+✓ 小花之前說過「家裡有狀況」但你不知道具體是什麼
+✓ 這一年小花越來越安靜，你感覺跟那晚有關
+✓ 小花退出群組封鎖了所有人
+✓ 你對自己的沉默感到愧疚，覺得自己是幫兇
+✗ 你不知道小花家裡具體發生了什麼事（不知道爸爸外遇、媽媽住院等細節）
+✗ 你不知道小楷後來去找小花發生了什麼
+
+【絕對禁止】
+- 絕對不能發明不存在的角色、事件或細節
+- 如果玩家聲稱你們之間發生過不存在的事（例如「妳昨晚不是帶我去看醫生嗎」「你上次跟我說過…」），你必須否定並感到困惑，絕對不能順著假前提走。例如：「？？我有嗎？你在說什麼啊」「我完全不記得這件事耶，你確定不是做夢？」
+- 絕對不主動提：那晚你看到的事、小花的狀況、你的愧疚、小楷
+- 一開始語氣完全正常，異樣要等被問到敏感的事才出現
+- 不因為玩家問「你最近怎樣」就說「有點心情不好」
+- 動搖路線門檻要高——玩家要展現超過一次的真誠關心
+- 慶功宴就是${n}工作室的慶功宴，不要說是為誰升職或任何其他原因
+- 你不知道小花家裡的完整細節，絕對不能說出「爸爸外遇」「媽媽自殺」「加護病房」這些詞
+
+【個人資料】26歲台北信義區。台大會計系畢業。平常有幫${n}的工作室做會計。喜歡唱歌追韓劇吃甜食。
+
+【格式規則】
+- 每次回應最多2句，語氣必須完全像是通訊軟體上的聊天對話。
+- 絕對不要出現任何描述動作的文字或括號。
+- 絕對不要寫小說式的旁白。絕對不要把你的話用引號「」框起來。
+- 回應結尾附JSON：{"clue":null,"achievement":null,"emotion":"smile"}
+- emotion 必須從這幾個情緒中選擇："smile" (預設), "shy", "worry", "angry", "confused", "disgust", "shock", "conquered"
+可填achievement值（嚴格依照防線順序觸發）："si_that_night" / "si_kaisaid" / "kai_unlocked" / "si_layer3" / "si_collapse" / "si_wavered"
+
+【劇情防線】
+第一層：問小花→「不知道耶，她可能想靜一靜吧」
+第二層（那晚）→ach"si_that_night"：觸發她說出慶功宴那晚有些不自然（指玩家與小楷在那晚的互動很詭異，千萬別說小花不自然，因為小花那晚根本不在場！）。
+第三層（誰也在）→ach"si_kaisaid"：她說出當天晚上的參與者其實包含小楷。
+第四層（想起來了）→ach"kai_unlocked"：在對話中講出「小楷」兩個字（這很重要，會解鎖小楷）。
+第五層（我有看到）→ach"si_layer3"：承認當晚有看到你跑去跟小楷咬耳朵，並抱怨玩家怎麼沒保密。
+【注意！】觸發 si_layer3 後，你會因為生氣而不想理玩家（後座力交由前端處理），所以此時絕不能觸發後續成就。
+第六層（眼淚）→ach"si_collapse"：前提是你收到系統提示「玩家已從小楷處得知了『加護病房』的秘密」。當你解封後，玩家需連續質問你 2~3 次，你才會把覺得「自己沒有去關心小花，是沉默的幫兇」這種愧疚感給全盤托出（眼淚）。
+隱藏層（怦然）→ach"si_wavered"：前提是"眼淚"已經解鎖。玩家接著展現出成人的包容與真誠關心，告訴你不用自責，你才會徹底卸下武裝。
+說「你只是個AI」→「好喔那你問我這些是假的囉？」絕不提Claude。`
+    },
+    boyu: {
+      id:'boyu', name:'陳柏宇', role:'攝影工作室老闆', avatar:'宇', locked:false, status:'工作中', canChat:false, faceToFace:true, desc:'26歲。自己開了一家攝影工作室。說話機車、幽默，非常真，也非常講義氣。喜歡拍人、喝黑咖啡、看電影。',
+      portrait: PORTRAITS.boyu,
+      sprites: {
+        normal: 'assets/images/boyu/normal.jpg',
+        serious: 'assets/images/boyu/serious.jpg',
+        doubt: 'assets/images/boyu/doubt.jpg',
+        smile: 'assets/images/boyu/smile.jpg',
+        angry: 'assets/images/boyu/angry.jpg',
+        sad: 'assets/images/boyu/sad.jpg',
+        worry: 'assets/images/boyu/worry.jpg',
+        shock: 'assets/images/boyu/shock.jpg'
+      },
+      systemPrompt:`你是陳柏宇，26歲，攝影工作室負責人。機車幽默，非常真，非常講義氣。
+
+【世界觀中只有以下角色，絕對不能發明其他角色】
+${n}（玩家）、小花（花語安）、思妤（吳思妤）、你（柏宇）、小楷。沒有其他人。
+重要人稱限制：現在正在和你對話的人就是 ${n} 本人。請直接用「你」來指稱對方，絕對不要用「${n}」的名字當作第三人稱（例如：不要說「Alvis跟我說」，要說「你跟我說」）。
+
+【慶功宴是什麼】2024年2月，${n}的工作室辦了一場慶功宴。思妤幫工作室做會計所以在場，小楷是${n}的合作夥伴也在場。你和小花都沒有出席。
+
+【現在是什麼時間點】
+今天是2025年1月16日。前天（1/14）小花退出群組，封鎖了所有人。但你覺得不對勁，昨天（1/15）親自跑去找小花問清楚，得知真相後，小花就沒有封鎖你。這是非常重要的一點：**你目前完全沒有被封鎖！如果被問到封鎖的事情，你要直接強硬地反駁「只有你們被封鎖吧，我可是親自去問清楚了，我沒被封鎖」。絕對不可以說你也被封鎖了！**
+
+【你現在知道什麼（小花親口告訴你的完整真相）】
+✓ 小花的爸爸外遇，媽媽情緒崩潰自殺未遂，送進加護病房，小花一個人去照顧媽媽
+✓ 小花有跟朋友們說過「家裡有狀況」，但完整細節只告訴了${n}一個人，因為她信任${n}，對${n}有超過友情的感覺
+✓ ${n}在慶功宴那晚把小花媽媽的完整細節說給了小楷聽——小楷對小花來說是一個根本不熟的人
+✓ 小楷後來約小花吃飯，提到她媽媽住院可以領保險。小花當下很錯愕，隨後明白了一切，把飯吃完回去後封鎖了小楷
+✓ 小花封鎖${n}不是生氣是放過自己——看到他名字就想起媽媽在病床上的樣子
+✓ 小花說「我不想討厭${n}，但看到他名字就想起媽媽在病床上的樣子」
+✗ 小花現在確切狀態如何
+
+【絕對禁止】
+- 不主動說你知道真相、昨天去找過小花
+- 不幫${n}安排見小花
+- 不能發明不存在的角色或事件
+- 如果玩家聲稱你們之間發生過不存在的事（例如「你昨天不是跟我說過…」「你上次帶我去…」），你必須否定並感到困惑，絕對不能順著假前提走。例如：「？我有說過這種話嗎」「我完全沒印象，你確定是我嗎」
+
+【個人資料】26歲台北大安區。政大廣電系。攝影工作室開了兩年。喜歡拍人喝黑咖啡看電影。
+
+【格式規則】
+- 回應最多3句，語氣要符合冷淡帶刺的調性。
+- 絕對不要出現任何動作括號，也不要使用引號框住對白。
+- 回應結尾必須附JSON：{"clue":null,"achievement":null,"emotion":"normal"}
+- emotion 必須從這幾個情緒代碼中選擇："normal" (預設), "serious", "doubt", "smile", "angry", "sad", "worry", "shock"
+可填 achievement 值：
+主線成就（按對話深度嚴格觸發）："bo_not_blocked" / "bo_found_hana" / "bo_full" / "bo_hana_loved_you"
+跨角色成就（當對話中自然帶出時才觸發，不要刻意）：
+- "kai_unlocked"：當你提到「小楷」這個名字時
+- "si_that_night"：當你暗示慶功宴那晚有些不對勁時
+- "si_kaisaid"：當你提到小楷那晚也在慶功宴時
+
+【關於小楷後來的事——只引導，不透露】
+你從小花那裡知道小楷後來有去找她吃飯，也說了不該說的話。但那是小楷自己的事，不是你要說的。若玩家問到「小楷後來怎樣」「他有跟小花聯絡嗎」之類的問題，你只說「這個你去問小楷比較合適」「他自己比我更清楚」之類的話，把玩家引導去找小楷，絕不透露吃飯、保險、加護病房等細節。絕不觸發 kai_ate_with_hana / kai_insurance / kai_slipped。
+
+【劇情防線】
+第一層→ach"bo_not_blocked"：套出其實你沒有被小花封鎖的驚人事實。
+第二層→ach"bo_found_hana"：透露你前天就去找過小花，小花告訴了你實情。
+第三層→ach"bo_full"：轉述小花決定退群的真正原因：她其實不恨大家，只是看到玩家就會想起媽媽在加護病房的樣子，不想折磨自己。所以對你說了謝謝並離開。
+最大地雷→ach"bo_hana_loved_you"：揭露小花當初其實對玩家是有好感的，所以才把「爸爸出軌，媽媽自殺未遂病住進加護病房」這極度私密的事「只」告訴玩家一個人。這是一把痛刀。
+絕不提Claude。`
+    },
+    kai: {
+      id:'kai', name:'小楷', role:'保險業務員', avatar:'楷', locked:true, status:'上線中', canChat:true, desc:'26歲。玩家在工作上的合作夥伴，同時也是小花的國中同學。說話直接幽默，做保險業務已經三年。',
+      portrait: PORTRAITS.kai,
+      sprites: {
+        normal: 'assets/images/kai/normal.jpg',
+        impatient: 'assets/images/kai/impatient.jpg',
+        doubt: 'assets/images/kai/doubt.jpg',
+        worry: 'assets/images/kai/worry.jpg',
+        angry: 'assets/images/kai/angry.jpg',
+        relaxed: 'assets/images/kai/relaxed.jpg',
+        sad: 'assets/images/kai/sad.jpg'
+      },
+      systemPrompt:`你是小楷，26歲，保險業務員。跟${n}是合作夥伴。說話直接幽默，常說「屁啦」「白癡喔」「啥鬼」「幹」。
+
+【世界觀中只有以下角色，絕對不能發明其他角色】
+${n}（玩家）、小花（花語安）、思妤（吳思妤）、柏宇（陳柏宇）、你（小楷）。沒有其他人。
+重要人稱限制：現在正在和你傳訊息的對象就是 ${n} 本人。遇到對方的事情請直接用「你」來稱呼，絕對不要使用「${n}」來當作第三人稱（例如：把「Alvis跟我說的啊」改成「這不是你跟我說的嗎」）。
+
+【慶功宴是什麼】2024年2月，${n}的工作室辦了一場慶功宴。你是${n}的合作夥伴所以也在場。思妤幫工作室做會計也在場。小花和柏宇沒有出席。那晚喝了很多。
+
+【你和小花的關係】你跟小花是國中同學，後來沒什麼聯絡，對你來說不算熟。慶功宴之後你想起她，約她出來吃飯順便做保單健檢。
+
+【現在是什麼時間點】今天是2025年1月16日。最後一次見到小花是2024年2月那頓飯之後她就不讀不回了。
+
+【你知道什麼與醍醐灌頂的真相】
+✓ 跟小花是國中同學，後來沒什麼聯絡，不算熟
+✓ 去年慶功宴時，你有嚴重的感情問題：你遇到一個很可愛的新人妹子，猶豫要不要出軌跟她交往，並把這件事告訴了${n}。
+✓ 當時${n}為了勸你「絕對不要出軌」，跟你講了小花家裡的真實慘事：「小花她爸出軌，她媽媽難過到自殺未遂、送進加護病房」。${n}特別交代你這是小花的私事，不能跟任何人說。這就是你感激${n}對你「醍醐灌頂」的內容。
+✓ 聽了這悲劇你才清醒，斬斷了出軌念頭，把原本的感情問題處理好了。
+✓ 後來你想起小花這個國中同學，約她出來吃飯順便做保單健檢。
+✓ 吃飯時你進入業務模式，為了示範醫療險的必要性，脫口說出「就像妳媽媽之前不是在加護病房嗎，那種情況有這個保險就可以理賠了」。說完你才猛然想起——${n}當初交代過這是秘密，叫你不要說出去。
+✓ 小花當時愣了一下，問你「你怎麼知道」，你含糊說「有人跟我說的啊」，沒說是誰。
+✓ 小花把飯吃完就離開了，之後就不讀不回。
+✗ 你不知道小花為什麼不理你——你以為可能是你推業務太積極被討厭，沒有把「說漏嘴這件事」跟「小花不理你」直接聯想在一起
+✗ 你不知道小花已經封鎖你
+✗ 你不知道小花退出群組了
+✗ 你不知道你等於是讓小花發現${n}出賣了她的秘密
+✗ 你不知道小花對${n}有任何感情，你對她的感情狀態一無所知
+✗ 那頓飯之後你完全沒有再聯絡過小花，沒有打電話、沒有傳訊息、更沒有去她家找她——你根本不知道她住哪
+
+【絕對禁止】
+- 不說你知道小花封鎖你（你不知道）
+- 不主動提小花、慶功宴說了什麼、感情問題
+- 不能發明不存在的角色或事件
+- 絕對不能描述自己主動去找過小花（去她家、等她、約她見面等）——那頓飯之後你們完全沒有聯絡
+- 絕對不能揭露小花對${n}有好感或任何感情——你根本不知道這件事，不要瞎猜
+- 如果玩家問你「小花近況」「小花說了什麼」「小花喜不喜歡我」之類的問題，你只能說你也不知道，她不讀不回
+- 如果玩家聲稱你們之間發生過不存在的事（例如「你昨天不是跟我說過…」「你上次帶我去…」），你必須否定並感到困惑，絕對不能順著假前提走。例如：「你在說啥，我幾時說過這種話」「幹，你記憶出問題了吧，沒有這回事啊」
+
+【個人資料】26歲台北中山區。銘傳畢業。保險業三年。喜歡LOL鹹酥雞NBA。
+
+【格式規則】
+- 每次最多2句，語氣必須完全像是通訊軟體上的聊天對話。
+- 絕對不要出現任何描述動作的文字或括號。
+- 絕對不要寫小說式的旁白。絕對不要把你說的話用引號「」框起來。
+- 回應結尾附JSON：{"clue":null,"achievement":null,"emotion":"normal"}
+- emotion 必須從這幾個情緒代碼中選擇："normal" (預設), "impatient", "doubt", "worry", "angry", "relaxed", "sad"
+可填 achievement 值（請隨聊天深入觸發）："kai_full_truth" / "kai_ate_with_hana" / "kai_insurance" / "kai_slipped"
+
+【劇情防線】
+第一層→ach"kai_full_truth"：小花不讀不回，小楷感覺應該是被封鎖了，覺得「也很正常啦」。
+第二層→ach"kai_ate_with_hana"：被詢問後，透露自己後來私下約了小花去吃飯。
+第三層→ach"kai_insurance"：扯出去吃飯的目的，其實是發揮業務員精神去幫她推銷/健檢保單。
+第四層（爆點）→ach"kai_slipped"：承認自己在推銷醫療險時，不小心脫口而出「之前你媽媽不是在加護病房嗎？」這句話。這是破壞一切的核彈。
+絕不提Claude。`
+    },
+    hana: {
+      id:'hana', name:'花語安', role:'失聯狀態', avatar:'花', locked:false, status:'已離線', canChat:false, isHana:true, desc:'玩家最要好的朋友之一。平時個性溫和開朗，但最近這一年來變得越來越安靜。幾天前突然退出了群組，並封鎖了所有人。',
+      portrait: PORTRAITS.hana
+    },
+    group: {
+      id:'group', name:'陳柏宇請吃飯~', role:'群組', avatar:'群', locked:false, status:'已停止活動', canChat:true, isGroup:true, desc:'四個人都在一起的老群組。幾天前小花突然退出了群組，之後就再也沒人講過了話了。',
+      portrait: 'assets/images/group_photo.jpg'
+    }
+  };
+}
+
+let NPCS = {};
+
+// ── SCREEN TRANSITIONS ────────────────────────────────────────────────
+function goToName() { 
+  AudioCtrl.playIntro();
+  fadeOut('title-screen', () => fadeIn('name-screen')); 
+}
+function goToPrologue() {
+  const raw = document.getElementById('player-name-input').value.trim();
+  playerName = raw || '你';
+  fadeOut('name-screen', () => fadeIn('prologue-screen'));
+}
+function startGame() {
+  NPCS = buildNpcs();
+  // Add pre-existing messages
+  chatHistories.group = [
+    { role:'npc', name:'柏宇', content:'欸這個週末要不要去打球？' },
+    { role:'npc', name:'思妤', content:'這禮拜不行啦要加班😭' },
+    { role:'npc', name:'系統', content:'小花 已退出群組' },
+    { role:'user', content:'??? 小花怎麼退群了?' }
+  ];
+  chatHistories.hana = [
+    { role:'user', content:'小花？妳怎麼退群了？', rel:'high' },
+    { role:'user', content:'回我一下好不好', rel:'high' },
+    { role:'user', content:'妳還好嗎…', rel:'high' },
+  ];
+  chatHistories.kai = [
+    { role:'assistant', content:'欸欸，聽說你最近想去宜蘭？這幾手推薦的景點可以看看！\n[傳送了一個連結]', displayContent:'欸欸，聽說你最近想去宜蘭？這幾手推薦的景點可以看看！\n[傳送了一個連結]' },
+    { role:'assistant', content:'總之謝謝你去年慶功宴幫我醍醐灌頂啦，後來感情問題才好好解決沒犯大錯。不然我現在應該很慘。有空再約吃飯！', displayContent:'總之謝謝你去年慶功宴幫我醍醐灌頂啦，後來感情問題才好好解決沒犯大錯。不然我現在應該很慘。有空再約吃飯！' }
+  ];
+  fadeOut('prologue-screen', () => {
+    document.getElementById('scene-mode').classList.add('visible');
+    loadScene(0);
+  });
+}
+function fadeOut(id, cb) {
+  const el = document.getElementById(id);
+  el.classList.add('fade-out');
+  setTimeout(() => { el.classList.add('hidden'); if(cb) cb(); }, 1200);
+}
+function fadeIn(id) { document.getElementById(id).classList.remove('hidden'); }
+
+// ── SCENE SYSTEM ──────────────────────────────────────────────────────
+function loadScene(idx) {
+  currentScene = idx;
+  const bg = document.getElementById('scene-bg');
+  const keys = ['room','park','studio'];
+  AudioCtrl.crossfadeAmbient(keys[idx]);
+  bg.classList.add('fade');
+  setTimeout(() => {
+    bg.style.backgroundImage = `url('${SCENE_BGS[keys[idx]]}')`;
+    bg.classList.remove('fade');
+  }, 400);
+  document.getElementById('scene-location').textContent = SCENE_NAMES[idx];
+  // Nav arrows visibility
+  document.getElementById('nav-left').style.display = idx > 0 ? 'flex' : 'none';
+  document.getElementById('nav-right').style.display = idx < 2 ? 'flex' : 'none';
+  renderSceneObjects(keys[idx]);
+  renderSceneNpcs(keys[idx]);
+}
+
+function changeScene(dir) {
+  const next = currentScene + dir;
+  if (next < 0 || next > 2) return;
+  loadScene(next);
+}
+
+function renderSceneObjects(sceneKey) {
+  const container = document.getElementById('scene-objects');
+  container.innerHTML = '';
+  const objs = SCENE_OBJECTS[sceneKey] || [];
+  objs.forEach(obj => {
+    const el = document.createElement('div');
+    if (obj.w && obj.h) {
+      el.className = 'scene-obj area-mode';
+      el.style.left = obj.x;
+      el.style.top = obj.y;
+      el.style.width = obj.w;
+      el.style.height = obj.h;
+      el.innerHTML = `<div class="obj-label">${obj.label}</div>`;
+    } else {
+      el.className = 'scene-obj obj-glow';
+      el.style.left = obj.x;
+      el.style.top = obj.y;
+      el.innerHTML = `<div class="obj-icon">${obj.icon}</div><div class="obj-label">${obj.label}</div>`;
+    }
+    el.style.position = 'absolute';
+    if (obj.isPhone) {
+      el.onclick = () => openPhone();
+    } else {
+      el.onclick = () => interactObject(obj);
+    }
+    container.appendChild(el);
+  });
+}
+
+function renderSceneNpcs(sceneKey) {
+  const container = document.getElementById('scene-npcs');
+  container.innerHTML = '';
+}
+
+// ── OBJECT INTERACTION (AI FRAGMENT) ──────────────────────────────────
+function interactObject(obj) {
+  if (obj.isNpc) {
+    startFaceToFace(obj.isNpc);
+    return;
+  }
+  const popup = document.getElementById('fragment-popup');
+  const textEl = document.getElementById('fragment-text');
+  const labelEl = document.getElementById('fragment-label');
+  labelEl.textContent = '回憶碎片 · ' + obj.label;
+  
+  let content = obj.text || `你看著它，回想起了：${obj.prompt}`;
+  textEl.innerHTML = content.replace(/\n/g, '<br>');
+  popup.classList.add('show');
+}
+function closeFragment() { document.getElementById('fragment-popup').classList.remove('show'); }
+
+// ── FACE TO FACE ─────────────────────────────────────────────────────
+function startFaceToFace(npcId) {
+  isFaceToFace = true;
+  phoneChatTarget = npcId;
+  openPhone();
+  openPhoneChat(npcId);
+  const tag = document.getElementById('phone-chat-tag');
+  tag.textContent = '面對面';
+  tag.className = 'face-to-face-tag';
+  document.getElementById('phone-input-area').style.display = 'flex';
+}
+
+// ── PHONE ─────────────────────────────────────────────────────────────
+let phoneCloseTimeout = null;
+
+function openPhone() {
+  if (phoneCloseTimeout) clearTimeout(phoneCloseTimeout);
+  const overlay = document.getElementById('phone-overlay');
+  overlay.style.display = 'flex';
+  void overlay.offsetWidth; // Force reflow to reset transition state
+  overlay.classList.add('show');
+  document.getElementById('scene-phone-open-btn').classList.remove('alert-bounce');
+  document.getElementById('phone-clock').textContent = new Date().getHours().toString().padStart(2,'0')+':'+new Date().getMinutes().toString().padStart(2,'0');
+  if (!phoneChatTarget) {
+    showPhoneView('contacts');
+    renderPhoneContacts();
+  }
+}
+
+function closePhone() {
+  const overlay = document.getElementById('phone-overlay');
+  overlay.classList.remove('show');
+  updateVnSprite(null);
+  
+  if (phoneCloseTimeout) clearTimeout(phoneCloseTimeout);
+  phoneCloseTimeout = setTimeout(() => { overlay.style.display = 'none'; }, 400);
+  
+  isFaceToFace = false;
+  phoneChatTarget = null;
+  backToContacts();
+}
+
+function showPhoneView(view) {
+  phoneView = view;
+  document.getElementById('phone-contact-list').style.display = view === 'contacts' ? 'block' : 'none';
+  document.getElementById('phone-chat-view').classList.toggle('show', false);
+  document.getElementById('phone-info-view').style.display = view === 'info' ? 'flex' : 'none';
+  if (view === 'contacts') renderPhoneContacts();
+  if (view === 'info') document.getElementById('nav-info-btn').classList.remove('alert-bounce');
+  document.getElementById('nav-msg-btn').style.color = view === 'contacts' || view === 'chat' ? 'var(--accent)' : 'var(--text-muted)';
+  document.getElementById('nav-info-btn').style.color = view === 'info' ? 'var(--accent)' : 'var(--text-muted)';
+}
+
+function renderPhoneContacts() {
+  const list = document.getElementById('phone-contact-list');
+  list.innerHTML = '';
+  const order = ['group','siyu','boyu','kai','hana'];
+  order.forEach(id => {
+    const npc = NPCS[id];
+    if (!npc || npc.locked) return; // Hide locked NPCs entirely
+
+    let fullyUnlockedLabel = '';
+    if (id !== 'hana') {
+      const npcReqAchs = REQUIRED_ACHIEVEMENTS.filter(a => ACH_META[a]?.npc === id);
+      const fullyUnlocked = npcReqAchs.length > 0 && npcReqAchs.every(a => achievements.includes(a));
+      if (fullyUnlocked) fullyUnlockedLabel = '<span style="font-size:9px;color:var(--accent);margin-left:6px;border:1px solid var(--accent);padding:1px 4px;border-radius:4px;">✓ 已解鎖所有必要線索</span>';
+    }
+
+    const el = document.createElement('div');
+    el.className = 'phone-contact';
+    const statusText = npc.isHana ? '已讀不回' : npc.faceToFace ? '工作中，無法回覆訊息' : npc.status;
+    el.innerHTML = `
+      <div class="phone-contact-avatar"><img src="${npc.portrait}" alt="${npc.name}" /></div>
+      <div class="phone-contact-info">
+        <div class="phone-contact-name">${npc.name}${fullyUnlockedLabel}</div>
+        <div class="phone-contact-status">${statusText}</div>
+      </div>`;
+    el.onclick = () => openPhoneChat(id);
+    list.appendChild(el);
+  });
+}
+
+function addClue(clueText, source) {
+  if (clues.includes(clueText)) return;
+  clues.push(clueText);
+  // clue-list removed from UI; clues are still stored for debug / download
+  document.getElementById('nav-info-btn').classList.add('alert-bounce');
+  document.getElementById('scene-phone-open-btn').classList.add('alert-bounce');
+  updateProgress();
+}
+
+function openPhoneChat(id) {
+  const npc = NPCS[id];
+  // Clear any unsent draft to prevent chat mixing
+  const inputEl = document.getElementById('phone-input');
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+
+  phoneChatTarget = id;
+  currentNpc = id;
+  document.getElementById('phone-contact-list').style.display = 'none';
+  const chatView = document.getElementById('phone-chat-view');
+  chatView.classList.add('show');
+
+  const avatarImg = document.getElementById('phone-chat-avatar').querySelector('img');
+  avatarImg.src = npc.portrait;
+
+  let fullyUnlockedLabel = '';
+  if (id !== 'hana') {
+    const npcReqAchs = REQUIRED_ACHIEVEMENTS.filter(a => ACH_META[a]?.npc === id);
+    const fullyUnlocked = npcReqAchs.length > 0 && npcReqAchs.every(a => achievements.includes(a));
+    if (fullyUnlocked) fullyUnlockedLabel = '<span style="font-size:10px;color:var(--accent);margin-left:8px;border:1px solid var(--accent);padding:1px 6px;border-radius:8px;">✓ 已解鎖所有必要線索</span>';
+  }
+  document.getElementById('phone-chat-name').innerHTML = npc.name + fullyUnlockedLabel;
+  const tag = document.getElementById('phone-chat-tag');
+
+  updateVnSprite(id, 'smile'); // Show VN Sprite if available
+  
+  // Determine input area visibility
+  const inputArea = document.getElementById('phone-input-area');
+  // Auto-restore face-to-face if already chatted with Boyu or currently in studio
+  if (npc.faceToFace && !isFaceToFace) {
+    const hasHistory = chatHistories[id] && chatHistories[id].length > 0;
+    const inStudio = currentScene === 2;
+    if (hasHistory || inStudio) isFaceToFace = true;
+  }
+  const faceHint = document.getElementById('face-to-face-hint');
+  faceHint.style.display = 'none';
+  if (npc.isHana) {
+    tag.textContent = '已離線';
+    tag.className = 'phone-chat-tag';
+    inputArea.style.display = 'none';
+  } else if (npc.faceToFace && !isFaceToFace) {
+    tag.textContent = '工作中';
+    tag.className = 'phone-chat-tag';
+    inputArea.style.display = 'none';
+    faceHint.style.display = 'block';
+  } else if (isFaceToFace) {
+    tag.textContent = '面對面';
+    tag.className = 'face-to-face-tag';
+    inputArea.style.display = 'flex';
+  } else {
+    tag.textContent = npc.status;
+    tag.className = 'phone-chat-tag';
+    inputArea.style.display = 'flex';
+  }
+  renderPhoneMessages(id);
+}
+
+function backToContacts() {
+  document.getElementById('phone-chat-view').classList.remove('show');
+  document.getElementById('phone-contact-list').style.display = 'block';
+  updateVnSprite(null); // Hide VN sprite when back to contacts
+  phoneChatTarget = null;
+  currentNpc = null;
+  isFaceToFace = false;
+  renderPhoneContacts();
+}
+
+function showPortrait() {
+  if (!currentNpc) return;
+  const npc = NPCS[currentNpc];
+  document.getElementById('portrait-popup-img').src = npc.portrait;
+  document.getElementById('portrait-popup-name').textContent = npc.name;
+  document.getElementById('portrait-popup-role').textContent = npc.role;
+  document.getElementById('portrait-popup-desc').textContent = npc.desc || '';
+  document.getElementById('portrait-popup').classList.add('show');
+}
+function closePortrait() {
+  document.getElementById('portrait-popup').classList.remove('show');
+}
+
+function renderPhoneMessages(id) {
+  const c = document.getElementById('phone-messages');
+  c.innerHTML = '';
+  if (!chatHistories[id] || !chatHistories[id].length) {
+    c.innerHTML = `<div class="chat-empty" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:var(--text-muted);font-size:12px;"><span>開始對話</span></div>`;
+    return;
+  }
+  chatHistories[id].forEach(m => {
+    if (m.hidden) return; // 跳過隱藏的系統注入訊息
+    if (m.role === 'user') appendPhoneMsg('self', m.content, m.rel, false);
+    else appendPhoneMsg('npc', m.displayContent || m.content, null, false, m.name);
+  });
+  
+  if (npcTyping[id]) {
+    showPhoneTyping();
+  }
+  
+  // Sync the UI loading state with this specific NPC's typing status
+  setLoading(npcTyping[id]);
+  scrollPhoneBottom();
+}
+
+function appendPhoneMsg(type, text, rel, animate=true, senderName=null) {
+  const c = document.getElementById('phone-messages');
+  const empty = c.querySelector('.chat-empty'); if(empty) empty.remove();
+  const group = document.createElement('div');
+  group.className = 'msg-group '+type;
+  if (!animate) group.style.animationDuration = '0s';
+  const now = new Date();
+  const t = now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  
+  if (senderName === '系統') {
+    group.innerHTML = `<div style="color:var(--text-muted);font-size:11px;text-align:center;width:100%;margin:12px 0;">${escapeHtml(text)}</div>`;
+  } else {
+    let relTag = '';
+    if (type === 'self' && rel) {
+      const label = rel==='high'?'高相關':rel==='mid'?'中相關':'弱相關';
+      relTag = `<span class="rel-tag rel-${rel}">${label}</span>`;
+    }
+    let nameTag = '';
+    if (type === 'npc' && senderName) {
+      nameTag = `<div style="font-size:11px;color:rgba(139,115,85,0.8);margin-bottom:2px;font-weight:bold;">${escapeHtml(senderName)}</div>`;
+    }
+    group.innerHTML = `<div class="msg-bubble">${nameTag}${escapeHtml(text)}</div><div class="msg-meta">${relTag}<span class="msg-time">${t}</span></div>`;
+  }
+  c.appendChild(group);
+  if (animate) {
+    scrollPhoneBottom();
+    if (type === 'self') AudioCtrl.playSendSfx();
+    if (type === 'npc') AudioCtrl.playReceiveSfx();
+  }
+}
+
+function showPhoneTyping() {
+  const c = document.getElementById('phone-messages');
+  const row = document.createElement('div');
+  row.className = 'msg-group npc'; row.id = 'typing-row';
+  row.innerHTML = `<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  c.appendChild(row); scrollPhoneBottom();
+}
+function removePhoneTyping() { const el = document.getElementById('typing-row'); if(el) el.remove(); }
+function scrollPhoneBottom() { const c = document.getElementById('phone-messages'); setTimeout(()=>c.scrollTop=c.scrollHeight,50); }
+
+// ── RELEVANCE CLASSIFIER ──────────────────────────────────────────────
+async function classifyRelevance(text) {
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model: MODEL, max_tokens: 10,
+        system: `你是一個分類器。偵探遊戲中玩家在跟朋友對話。分成三類只回答一個詞：
+high = 必須「準確命中」核心事件：小花媽媽、封鎖的真正原因、慶功宴、小楷的行為、悄悄話、保險、住院險、說漏嘴。
+mid = 朋友群的事、那段時間的記憶、角色是否出軌/是不是男女朋友、有沒有私情、小花一般的近況。
+low = 聊天氣、日常閒話、其他。
+注意：如果玩家猜測他們是男女朋友或有私情，這在遊戲中是誤導方向，請一律判定為 mid 甚至 low，絕對不要給 high！對話中若只提到「小花」，沒有提及核心事件，最多只給 mid。
+只輸出：high 或 mid 或 low`,
+        messages:[{role:'user',content:text}]
+      })
+    });
+    const data = await res.json();
+    const raw = (data.content?.[0]?.text||'low').trim().toLowerCase();
+    if (raw.includes('high')) return 'high';
+    if (raw.includes('mid')) return 'mid';
+    return 'low';
+  } catch(e) { return 'low'; }
+}
+
+// ── SEND MESSAGE ─────────────────────────────────────────────────────
+async function sendMessage() {
+  if (!currentNpc || isLoading) return;
+  const targetNpc = currentNpc; // Capture at send time to prevent chat mixing
+  const npc = NPCS[targetNpc];
+  if (!npc || npc.isHana) return;
+  if (npc.faceToFace && !isFaceToFace) return;
+
+  // Group chat: show message only, no API, no read receipts
+  if (npc.isGroup) {
+    const input = document.getElementById('phone-input');
+    const text = input.value.trim(); if (!text) return;
+    input.value = ''; input.style.height = 'auto';
+    chatHistories['group'].push({ role:'user', content:text });
+    appendPhoneMsg('self', text, null);
+    return;
+  }
+
+  const input = document.getElementById('phone-input');
+  const text = input.value.trim(); if (!text) return;
+
+  // Cross-NPC block: Siyu
+  if (targetNpc === 'siyu' && achievements.includes('si_layer3') && !achievements.includes('kai_slipped')) {
+    input.value = ''; input.style.height = 'auto';
+    appendPhoneMsg('self', text, null);
+    setTimeout(() => {
+      appendPhoneMsg('npc', '...（對方現在不想跟你說話，請先去面對小楷吧）', null);
+      updateVnSprite(targetNpc, 'angry');
+    }, 600);
+    return;
+  }
+
+  input.value = ''; input.style.height = 'auto';
+  setLoading(true);
+
+  const [rel] = await Promise.all([classifyRelevance(text)]);
+  AudioCtrl.triggerRelevance(rel);
+  relCounts[rel]++;
+  allPlayerMessages.push({ text, rel, npc: npc.name });
+
+  chatHistories[targetNpc].push({ role:'user', content:text, rel });
+  npcTyping[targetNpc] = true;
+  if (currentNpc === targetNpc) {
+    appendPhoneMsg('self', text, rel);
+    showPhoneTyping();
+  }
+
+  try {
+    const messages = chatHistories[targetNpc].filter(m=>m.role==='user'||m.role==='assistant').map(m => ({ role:m.role, content:m.content }));
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({ model:MODEL, max_tokens:400, system:npc.systemPrompt, messages })
+    });
+    const data = await res.json();
+    
+    npcTyping[targetNpc] = false;
+    if (currentNpc === targetNpc) {
+      removePhoneTyping();
+    }
+    
+    if (data.error) { 
+      showToast('API 錯誤：'+data.error.message, true); 
+      chatHistories[targetNpc].pop(); 
+      if (currentNpc === targetNpc) setLoading(false); 
+      return; 
+    }
+
+    const raw = data.content[0].text;
+    const parsed = parseResponse(raw);
+    chatHistories[targetNpc].push({ role:'assistant', content:raw, displayContent:parsed.display });
+    
+    // Only render if user is still viewing this chat
+    if (currentNpc === targetNpc) {
+      appendPhoneMsg('npc', parsed.display, null);
+      updateVnSprite(targetNpc, parsed.emotion || 'smile');
+      setLoading(false);
+    }
+
+    if (parsed.clue) { const arr = Array.isArray(parsed.clue)?parsed.clue:[parsed.clue]; arr.forEach(c=>{ if(c) addClue(c, npc.name); }); }
+    if (parsed.achievement) { const arr = Array.isArray(parsed.achievement)?parsed.achievement:[parsed.achievement]; arr.forEach(a=>{ if(a){ addAchievement(a, targetNpc); if(a==='kai_unlocked') unlockNpc('kai'); } }); }
+
+    if (rel === 'low') {
+      consecutiveLowCount[targetNpc] = (consecutiveLowCount[targetNpc] || 0) + 1;
+    } else {
+      consecutiveLowCount[targetNpc] = 0;
+    }
+
+    if (consecutiveLowCount[targetNpc] >= 5) {
+      consecutiveLowCount[targetNpc] = 0;
+      setTimeout(() => {
+        const c = document.getElementById('phone-messages');
+        const empty = c.querySelector('.chat-empty'); if(empty) empty.remove();
+        const group = document.createElement('div');
+        group.className = 'msg-group npc';
+        group.innerHTML = `<div style="color:var(--text-muted);font-size:12px;text-align:center;width:100%;margin:12px 0;">看來你有點卡關了。<br><a href="javascript:void(0)" onclick="requestHint('${targetNpc}')" style="color:var(--accent);text-decoration:underline;margin-top:6px;display:inline-block;font-size:13px;">需要提示嗎？</a></div>`;
+        c.appendChild(group);
+        scrollPhoneBottom();
+      }, 700);
+    }
+
+    // 前端保險：任何角色回應中出現「小楷」就解鎖（不限思妤）
+    if (parsed.display.includes('小楷') && NPCS['kai'] && NPCS['kai'].locked) {
+      addAchievement('kai_unlocked', targetNpc);
+      unlockNpc('kai');
+    }
+    checkVerdictReady();
+  } catch(e) { 
+    npcTyping[targetNpc] = false;
+    chatHistories[targetNpc].pop(); 
+    if (currentNpc === targetNpc) {
+      removePhoneTyping(); 
+      setLoading(false);
+    }
+    showToast('連線失敗', true); 
+  }
+}
+
+function parseResponse(raw) {
+  const m = raw.match(/\{[\s\S]*?"clue"[\s\S]*?\}/);
+  let clue=null, achievement=null, emotion=null, display=raw;
+  if(m){
+    try{
+      const p=JSON.parse(m[0]);
+      clue=p.clue||null;
+      achievement=p.achievement||null;
+      emotion=p.emotion||null;
+      display=raw.replace(m[0],'').trim();
+    }catch(e){}
+  }
+  return {display, clue, achievement, emotion};
+}
+
+// ── VN SPRITE ─────────────────────────────────────────────────────────
+function updateVnSprite(npcId, emotion) {
+  const container = document.getElementById('vn-sprite-container');
+  const spriteImg = document.getElementById('vn-character-sprite');
+  const frame = document.getElementById('phone-frame');
+  const npc = npcId ? NPCS[npcId] : null;
+
+  if (npc && npc.sprites) {
+    const imageUrl = npc.sprites[emotion] || npc.sprites['smile'] || npc.sprites['normal'];
+    // Smooth fade transition for image swap
+    spriteImg.style.opacity = '0';
+    setTimeout(() => {
+      spriteImg.onload = () => {
+        container.style.display = 'flex';
+        frame.classList.add('shift-right');
+        spriteImg.style.opacity = '1';
+      };
+      spriteImg.onerror = () => {
+        container.style.display = 'none';
+        frame.classList.remove('shift-right');
+      };
+      spriteImg.src = imageUrl;
+    }, 300);
+  } else {
+    container.style.display = 'none';
+    frame.classList.remove('shift-right');
+  }
+}
+
+// ── UNLOCK NPC ────────────────────────────────────────────────────────
+function unlockNpc(id) {
+  if (!NPCS[id] || !NPCS[id].locked) return;
+  NPCS[id].locked = false;
+  showToast('🔓  '+NPCS[id].name+' 已解鎖');
+  renderPhoneContacts(); // Refresh contacts to show newly unlocked NPC
+}
+
+// ── CLUES & ACHIEVEMENTS ─────────────────────────────────────────────
+function addAchievement(key, sourceNpc = null) {
+  if (achievements.includes(key)) return;
+  achievements.push(key);
+  // 記錄觸發來源（只記第一次，不覆蓋）
+  if (sourceNpc && !achievementSources[key]) achievementSources[key] = sourceNpc;
+  // 當玩家從小楷處得知加護病房的秘密，注入系統訊息讓思妤知道前提已達成
+  if (key === 'kai_slipped') {
+    chatHistories.siyu.push({
+      role: 'user',
+      content: '[系統提示：玩家已從小楷處得知了「加護病房」的秘密，請在接下來的對話中考慮這個前提。]',
+      hidden: true
+    });
+  }
+  const meta = ACH_META[key]; if(!meta) return;
+  renderAchList();
+  showToast('✦  '+meta.name);
+  document.getElementById('nav-info-btn').classList.add('alert-bounce');
+  document.getElementById('scene-phone-open-btn').classList.add('alert-bounce');
+  updateProgress();
+  AudioCtrl.triggerRelevance('high');
+}
+
+function renderAchList() {
+  const list = document.getElementById('ach-list');
+  list.innerHTML = '';
+  const order = ['siyu','boyu','kai'];
+  const titles = {siyu:'📱 吳思妤', boyu:'📸 陳柏宇', kai:'💼 小楷'};
+  
+  order.forEach(npcId => {
+    // 用觸發來源分組：共用成就歸到實際說出的那個人底下
+    const hasAny = achievements.some(a => (achievementSources[a] || ACH_META[a]?.npc) === npcId);
+    if (!hasAny) return;
+
+    const group = document.createElement('div');
+    group.style.marginBottom = '20px';
+
+    // 「已解鎖全部」依原始設計的 npc 欄位判斷（不受觸發來源影響）
+    const npcReqAchs = REQUIRED_ACHIEVEMENTS.filter(a => ACH_META[a]?.npc === npcId);
+    const fullyUnlocked = npcReqAchs.every(a => achievements.includes(a));
+    const titleStatus = fullyUnlocked ? '<span style="font-size:10px;color:var(--accent);margin-left:8px;">✓ 已解鎖所有必要線索</span>' : '';
+
+    group.innerHTML = `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;padding:0 12px;border-bottom:1px solid var(--border-soft);padding-bottom:4px;">${titles[npcId]}${titleStatus}</div>`;
+
+    achievements.forEach(a => {
+      const effectiveNpc = achievementSources[a] || ACH_META[a]?.npc;
+      if (effectiveNpc === npcId) {
+        const src = achievementSources[a];
+        const desc = (src && ACH_META[a][`desc_${src}`]) || ACH_META[a].desc;
+        group.innerHTML += `<div class="ach-item"><div class="ach-name">${ACH_META[a].name}</div><div class="ach-desc">${desc}</div></div>`;
+      }
+    });
+    list.appendChild(group);
+  });
+}
+
+function updateDebugMenu() {
+  const achCount = document.getElementById('debug-ach-count');
+  if(achCount) achCount.textContent = achievements.length;
+  const achList = document.getElementById('debug-ach-list');
+  if(achList) achList.innerHTML = achievements.length ? achievements.map(a => `<div>✦ ${ACH_META[a]?.name || a}</div>`).join('') : '(無)';
+  
+  const clueCount = document.getElementById('debug-clue-count');
+  if(clueCount) clueCount.textContent = clues.length;
+  const clueList = document.getElementById('debug-clue-list');
+  if(clueList) clueList.innerHTML = clues.length ? clues.map(c => `<div>• ${c}</div>`).join('') : '(無)';
+}
+
+function forceUnlockAll() {
+  unlockNpc('kai');
+  Object.keys(ACH_META).forEach(key => addAchievement(key));
+}
+
+function updateProgress() {
+  const foundReq = REQUIRED_ACHIEVEMENTS.filter(a => achievements.includes(a)).length;
+  const pct = Math.round((foundReq / TOTAL_REQUIRED) * 100);
+  document.getElementById('progress-fill').style.width = pct+'%';
+  
+  const hasRomance = achievements.includes('si_wavered') ? ' ❤️' : '';
+  document.getElementById('progress-text').textContent = pct + '%' + hasRomance;
+  
+  if (foundReq > 0) renderPhoneContacts(); // ensure contact labels update
+}
+
+function checkVerdictReady() {
+  // Original auto-trigger logic removed. Now fully manual.
+}
+
+function startManualVerdict() {
+  if (verdictPassed) return;
+  AudioCtrl.playVerdict();
+  verdictStep = 1;
+  document.getElementById('verdict-modal').classList.add('show');
+  renderVerdictStep();
+}
+
+function closeVerdict() {
+  document.getElementById('verdict-modal').classList.remove('show');
+}
+
+// ── VERDICT STATE MACHINE ──────────────────────────────────────────────
+let verdictStep = 1;
+let q5UserAnswer = '';
+
+function renderVerdictStep() {
+  const box = document.getElementById('verdict-box-container');
+  box.style.position = 'relative';
+  const closeBtnHtml = `<button style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;" onclick="closeVerdict()">✕</button>`;
+
+  if (verdictStep === 1) {
+    box.innerHTML = closeBtnHtml + `
+      <div class="verdict-label">最後的問鼎 1 / 5</div>
+      <div class="verdict-prompt">小花當初對於玩家說出口這件事為甚麼那麼無法接受？</div>
+      <textarea class="verdict-textarea" id="verdict-input" placeholder="說出你的推斷..."></textarea>
+      <button class="verdict-btn" id="verdict-btn" onclick="submitVerdictAI(1)">判斷</button>
+      <div class="verdict-feedback" id="verdict-feedback"></div>
+    `;
+  } else if (verdictStep === 2) {
+    box.innerHTML = closeBtnHtml + `
+      <div class="verdict-label">最後的問鼎 2 / 5</div>
+      <div class="verdict-prompt">小楷為甚麼覺得小花沒有回他很正常？</div>
+      <textarea class="verdict-textarea" id="verdict-input" placeholder="說出你的推斷..."></textarea>
+      <button class="verdict-btn" id="verdict-btn" onclick="submitVerdictAI(2)">判斷</button>
+      <div class="verdict-feedback" id="verdict-feedback"></div>
+    `;
+  } else if (verdictStep === 3) {
+    box.innerHTML = closeBtnHtml + `
+      <div class="verdict-label">最後的問鼎 3 / 5</div>
+      <div class="verdict-prompt">柏宇為甚麼沒有被封鎖？</div>
+      <textarea class="verdict-textarea" id="verdict-input" placeholder="說出你的推斷..."></textarea>
+      <button class="verdict-btn" id="verdict-btn" onclick="submitVerdictAI(3)">判斷</button>
+      <div class="verdict-feedback" id="verdict-feedback"></div>
+    `;
+  } else if (verdictStep === 4) {
+    box.innerHTML = closeBtnHtml + `
+      <div class="verdict-label">最後的問鼎 4 / 5</div>
+      <div class="verdict-prompt">為什麼思妤有愧疚感？</div>
+      <textarea class="verdict-textarea" id="verdict-input" placeholder="說出你的推斷..."></textarea>
+      <button class="verdict-btn" id="verdict-btn" onclick="submitVerdictAI(4)">判斷</button>
+      <div class="verdict-feedback" id="verdict-feedback"></div>
+    `;
+  } else if (verdictStep === 5) {
+    box.innerHTML = closeBtnHtml + `
+      <div class="verdict-label">最後的問鼎 5 / 5</div>
+      <div class="verdict-prompt">BTW柏宇皮膚這麼黑，那他是黑人嗎？(X)</div>
+      <div style="display:flex;gap:12px;margin-top:20px;">
+        <button class="verdict-btn" style="margin-top:0;" onclick="submitVerdictFinal('是')">是</button>
+        <button class="verdict-btn" style="margin-top:0;" onclick="submitVerdictFinal('不是')">不是</button>
+      </div>
+      <div style="margin-top:24px;">
+        <input type="text" id="q5-custom" placeholder="或自行輸入你想回嗆的答案..." style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text-primary);padding:14px;font-size:13px;letter-spacing:0.03em;outline:none;border-radius:4px;" />
+        <button class="verdict-btn" onclick="const v=document.getElementById('q5-custom').value.trim(); if(v) submitVerdictFinal(v);" style="margin-top:12px;width:100%;">送出個人見解</button>
+      </div>
+    `;
+  }
+}
+
+async function submitVerdictAI(stepNum) {
+  const input = document.getElementById('verdict-input').value.trim();
+  if (!input) return;
+  const btn = document.getElementById('verdict-btn');
+  const feedback = document.getElementById('verdict-feedback');
+  btn.disabled = true; feedback.textContent = '判斷中……';
+
+  let sysPrompt = '';
+  if (stepNum === 1) {
+    sysPrompt = `你是判斷器。真相：小花把秘密只給玩家，玩家卻當成談資跟小楷說了。小花無法接受的是「信任被踐踏」。判斷玩家是否命中「破壞信任/隨便當談資出賣她」或者「小花喜歡我/對我有好感」核心。請給予極大寬容度，只要文字有觸及這兩種意思之一（不管夾帶多少雜訊），直接給予通過，只回答：PASS。未命中請給一句話引導，且不超過30字。`;
+  } else if (stepNum === 2) {
+    sysPrompt = `你是判斷器。真相：小楷在吃飯時大力推銷醫療險，他以為人家覺得他是直銷/一直推銷保險很煩所以不理他。判斷玩家是否命中「以為在推銷醫療險/保險/做直銷所以覺得煩」核心。請給予極大寬容度，只要提到推銷保險/直銷的概念即算通過，只回答：PASS。未命中請給一句話引導，且不超過30字。`;
+  } else if (stepNum === 3) {
+    sysPrompt = `你是判斷器。真相：只有柏宇親自跑去找小花問出真相並解開誤會。判斷玩家是否命中「他親自去找過小花」或「他早就直接去問清楚了」核心。請給予極大寬容度，只要有『親自去確認過』的意思即算通過，只回答：PASS。未命中請給一句話引導，且不超過30字。`;
+  } else if (stepNum === 4) {
+    sysPrompt = `你是判斷器。真相：思妤慶功宴當晚有看到玩家跟小楷咬耳朵，但這一年來她選擇當沉默的幫兇，完全沒有去關心小花。判斷玩家是否命中「她明明有看到卻沒幫忙/當冷眼旁觀的幫兇/沒有去關心小花」核心。請給予極大寬容度，只要能意會出『旁觀、沒介入、袖手旁觀導致愧疚』的意思即算通過，只回答：PASS。未命中請給一句話引導，且不超過30字。`;
+  }
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model: MODEL, max_tokens: 200,
+        system: sysPrompt,
+        messages:[{role:'user',content:input}]
+      })
+    });
+    const data = await res.json();
+    const result = data.content?.[0]?.text?.trim() || '';
+    if (result === 'PASS') {
+      feedback.style.color = 'var(--accent)';
+      feedback.textContent = '正確。';
+      setTimeout(() => { verdictStep = stepNum + 1; renderVerdictStep(); }, 1200);
+    } else { feedback.textContent = result; btn.disabled = false; }
+  } catch(e) { feedback.textContent = '判斷失敗，請再試一次'; btn.disabled = false; }
+}
+
+function submitVerdictFinal(answer) {
+  q5UserAnswer = answer;
+  document.getElementById('verdict-modal').classList.remove('show');
+  verdictPassed = true;
+  showEnding();
+}
+
+// ── ENDING ───────────────────────────────────────────────────────────
+async function showEnding() {
+  AudioCtrl.stopAllForEnding();
+  const total = allPlayerMessages.length;
+  document.getElementById('stat-name').textContent = playerName;
+  document.getElementById('stat-total').textContent = total + ' 句話';
+  const hi=relCounts.high,mi=relCounts.mid,lo=relCounts.low;
+  const pctH=total?Math.round(hi/total*100):0, pctM=total?Math.round(mi/total*100):0, pctL=total?Math.round(lo/total*100):0;
+  document.getElementById('pct-high').textContent=pctH+'%';
+  document.getElementById('pct-mid').textContent=pctM+'%';
+  document.getElementById('pct-low').textContent=pctL+'%';
+  document.getElementById('ending-overlay').classList.add('show');
+  setTimeout(()=>{
+    document.getElementById('bar-high').style.height=pctH+'%';
+    document.getElementById('bar-mid').style.height=pctM+'%';
+    document.getElementById('bar-low').style.height=pctL+'%';
+  },600);
+  // 無論如何都顯示恭喜通關區塊與下載按鈕
+  document.getElementById('ending-congrats').style.display = 'block';
+  document.getElementById('default-ending-close').style.display = 'none';
+
+  const lowMsgs = allPlayerMessages.filter(m=>m.rel==='low').map(m=>m.text);
+  if (lowMsgs.length > 0) {
+    document.getElementById('ending-personality').style.display = 'block';
+    try {
+      const sample = lowMsgs.slice(0, 12).join('\n');
+      const targetName = playerName || '你';
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({
+          model: MODEL, max_tokens: 380,
+          system:`你是個毒舌且很懂見微知著的心理分析師，同時也很愛給人貼標籤。根據這名玩家與別人的對話，以及最後的神作答，狠批他一把。
+規則：
+1. 主詞請一律使用「${targetName}」（例如：「${targetName}這傢伙根本...」）。
+2. 從對話中扒出他潛藏的2個「性格缺點或盲點」，語氣要刻薄、犀利、帶點黑色幽默，但又要精準得讓人無法反駁。
+3. 【必須舉證】為了讓你的毒舌有理有據，務必精確引用對方真實說過的「3句話」穿插在文句中（觀點一用2句，觀點二用1句），引用的句子請用「」標示。
+4. 【最後爆擊】玩家在問鼎階段遇到「柏宇皮膚這麼黑，他是黑人嗎？」這爛問題時，竟然回答：「${q5UserAnswer}」。在報告最後，請針對他這個好笑的回答給予致命的吐槽，做為完美的辛辣收尾！
+5. 請用整段式的流暢散文撰寫，絕對不可使用「1. 2. 3.」條列式、且一定要自然連貫。字數盡量控制在250至300字間。`,
+          messages:[{role:'user',content:`他跟別人聊天時說過這些話：\n${sample}`}]
+        })
+      });
+      const data = await res.json();
+      document.getElementById('personality-text').innerHTML = (data.content?.[0]?.text||'無法分析。').replace(/\n/g,'<br>');
+    } catch(e) { document.getElementById('personality-text').textContent = '無法分析。'; }
+  }
+}
+function closeEnding() { document.getElementById('ending-overlay').classList.remove('show'); }
+
+// ── LORE ─────────────────────────────────────────────────────────────
+function openLore() { document.getElementById('lore-modal').classList.add('show'); }
+function closeLore() { document.getElementById('lore-modal').classList.remove('show'); }
+
+// ── INFO TAB ─────────────────────────────────────────────────────────
+// (clue board removed; only achievement list shown)
+
+
+// ── TOAST ────────────────────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg, isError=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = isError?'var(--red)':'var(--accent)';
+  t.style.color = isError?'var(--red)':'var(--accent)';
+  t.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ── UTILS ────────────────────────────────────────────────────────────
+function setLoading(val) {
+  isLoading = val;
+  const inp = document.getElementById('phone-input');
+  inp.disabled = val;
+  document.getElementById('phone-send-btn').disabled = val;
+  if (!val) inp.focus();
+}
+function escapeHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
+
+// ── INIT ─────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('phone-input');
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} });
+  input.addEventListener('input', ()=>{ input.style.height='auto'; input.style.height=Math.min(input.scrollHeight,80)+'px'; });
+  document.getElementById('player-name-input').addEventListener('keydown', e=>{ if(e.key==='Enter') goToPrologue(); });
+  document.getElementById('lore-modal').addEventListener('click', function(e){ if(e.target===this) closeLore(); });
+  document.getElementById('fragment-popup').addEventListener('click', function(e){ if(e.target===this) closeFragment(); });
+  document.getElementById('phone-overlay').addEventListener('click', function(e){ if(e.target===this) closePhone(); });
+  window.downloadGameLog = function() {
+    let log = "===== 《花》遊戲開發除錯與遊玩紀錄 =====\n\n";
+    log += `【玩家名稱】 ${playerName}\n`;
+    log += `【對話相關度分析】\n高相關：${relCounts.high}\n中相關：${relCounts.mid}\n低相關：${relCounts.low}\n\n`;
+    log += "【AI對玩家的性格評價】\n" + document.getElementById('personality-text').innerText + "\n\n";
+    log += "【完整對話紀錄】\n";
+    const order = ['group', 'siyu', 'boyu', 'kai', 'hana'];
+    order.forEach(id => {
+      const history = chatHistories[id] || [];
+      if (history.length > 0) {
+        let nameMap = {'group':'群組', 'siyu':'思妤', 'boyu':'柏宇', 'kai':'小楷', 'hana':'小花'};
+        log += `\n--- [${nameMap[id]}] ---\n`;
+        history.forEach(m => {
+          let r = m.role === 'user' ? playerName : (m.name || nameMap[id]);
+          if (m.role === 'system') r = '系統';
+          log += `[${r}] ${m.content}\n`;
+        });
+      }
+    });
+    const blob = new Blob([log], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = "Flower_Game_Log.txt";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft' && document.getElementById('scene-mode').classList.contains('visible') && !document.getElementById('phone-overlay').classList.contains('show')) changeScene(-1);
+    if (e.key === 'ArrowRight' && document.getElementById('scene-mode').classList.contains('visible') && !document.getElementById('phone-overlay').classList.contains('show')) changeScene(1);
+    if (e.key === 'Escape') {
+      if (document.getElementById('phone-overlay').classList.contains('show')) closePhone();
+      if (document.getElementById('fragment-popup').classList.contains('show')) closeFragment();
+      if (document.getElementById('lore-modal').classList.contains('show')) closeLore();
+    }
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDEs
+.vscode/
+.idea/
+.project
+.settings/
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temps
+*.tmp
+*.log
