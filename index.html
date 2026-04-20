@@ -326,6 +326,11 @@
   <div class="name-prompt">你叫什麼名字？</div>
   <div class="name-input-wrap">
     <input class="name-input" id="player-name-input" placeholder="輸入你的名字" maxlength="10" />
+    <div style="margin-top:28px;">
+      <div class="name-prompt" style="font-size:12px;letter-spacing:0.1em;margin-bottom:10px;animation-delay:0.6s;">Anthropic API Key</div>
+      <input class="name-input" id="api-key-input" type="password" placeholder="sk-ant-..." style="font-size:14px;width:320px;letter-spacing:0.05em;" />
+      <div class="name-hint" style="margin-top:8px;font-size:10px;line-height:1.6;">本遊戲需要 Anthropic API Key 才能遊玩<br>請至 <a href="https://console.anthropic.com/" target="_blank" style="color:var(--accent);text-decoration:underline;">console.anthropic.com</a> 取得</div>
+    </div>
     <div class="name-hint">按 Enter 或點下方繼續</div>
     <button class="name-btn" onclick="goToPrologue()">繼續</button>
   </div>
@@ -543,8 +548,28 @@
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────
-const API_KEY = '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';
+let userAPIKey = '';
 const MODEL = 'claude-sonnet-4-20250514';
+
+// ── TOKEN TRACKING ───────────────────────────────────────────────────
+let tokenUsage = { input: 0, output: 0 };
+const TOKEN_PRICE = { inputPerM: 3.0, outputPerM: 15.0 }; // USD per 1M tokens
+const USD_TO_TWD = 32.5;
+
+function trackTokens(data) {
+  if (data && data.usage) {
+    tokenUsage.input += (data.usage.input_tokens || 0);
+    tokenUsage.output += (data.usage.output_tokens || 0);
+  }
+}
+function getTokenCostNTD() {
+  const usd = (tokenUsage.input / 1e6) * TOKEN_PRICE.inputPerM + (tokenUsage.output / 1e6) * TOKEN_PRICE.outputPerM;
+  return (usd * USD_TO_TWD).toFixed(2);
+}
+function getTokenCostHtml() {
+  const total = tokenUsage.input + tokenUsage.output;
+  return `<div style="position:absolute;top:16px;left:16px;font-size:10px;color:var(--text-muted);letter-spacing:0.05em;line-height:1.6;pointer-events:none;">Tokens: ${total.toLocaleString()} ≈ NT$ ${getTokenCostNTD()}</div>`;
+}
 
 // ── PORTRAITS ─────────────────────────────────────────────────────────
 const PORTRAITS = {
@@ -1056,6 +1081,12 @@ function goToName() {
 }
 function goToPrologue() {
   const raw = document.getElementById('player-name-input').value.trim();
+  const keyVal = document.getElementById('api-key-input').value.trim();
+  if (!keyVal || !keyVal.startsWith('sk-')) {
+    showToast('請輸入有效的 Anthropic API Key（以 sk- 開頭）', true);
+    return;
+  }
+  userAPIKey = keyVal;
   playerName = raw || '你';
   fadeOut('name-screen', () => fadeIn('prologue-screen'));
 }
@@ -1405,7 +1436,7 @@ async function classifyRelevance(text) {
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json','x-api-key':userAPIKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model: MODEL, max_tokens: 10,
         system: `你是一個分類器。偵探遊戲中玩家在跟朋友對話。分成三類只回答一個詞：
@@ -1418,6 +1449,7 @@ low = 聊天氣、日常閒話、其他。
       })
     });
     const data = await res.json();
+    trackTokens(data);
     const raw = (data.content?.[0]?.text||'low').trim().toLowerCase();
     if (raw.includes('high')) return 'high';
     if (raw.includes('mid')) return 'mid';
@@ -1476,10 +1508,11 @@ async function sendMessage() {
     const messages = chatHistories[targetNpc].filter(m=>m.role==='user'||m.role==='assistant').map(m => ({ role:m.role, content:m.content }));
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json','x-api-key':userAPIKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({ model:MODEL, max_tokens:400, system:npc.systemPrompt, messages })
     });
     const data = await res.json();
+    trackTokens(data);
     
     npcTyping[targetNpc] = false;
     if (currentNpc === targetNpc) {
@@ -1703,9 +1736,10 @@ function renderVerdictStep() {
   const box = document.getElementById('verdict-box-container');
   box.style.position = 'relative';
   const closeBtnHtml = `<button style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;" onclick="closeVerdict()">✕</button>`;
+  const tokenHtml = getTokenCostHtml();
 
   if (verdictStep === 1) {
-    box.innerHTML = closeBtnHtml + `
+    box.innerHTML = tokenHtml + closeBtnHtml + `
       <div class="verdict-label">最後的問鼎 1 / 5</div>
       <div class="verdict-prompt">小花當初對於玩家說出口這件事為甚麼那麼無法接受？</div>
       <textarea class="verdict-textarea" id="verdict-input" placeholder="說出你的推斷..."></textarea>
@@ -1713,7 +1747,7 @@ function renderVerdictStep() {
       <div class="verdict-feedback" id="verdict-feedback"></div>
     `;
   } else if (verdictStep === 2) {
-    box.innerHTML = closeBtnHtml + `
+    box.innerHTML = tokenHtml + closeBtnHtml + `
       <div class="verdict-label">最後的問鼎 2 / 5</div>
       <div class="verdict-prompt">小楷為甚麼覺得小花沒有回他很正常？</div>
       <textarea class="verdict-textarea" id="verdict-input" placeholder="說出你的推斷..."></textarea>
@@ -1721,7 +1755,7 @@ function renderVerdictStep() {
       <div class="verdict-feedback" id="verdict-feedback"></div>
     `;
   } else if (verdictStep === 3) {
-    box.innerHTML = closeBtnHtml + `
+    box.innerHTML = tokenHtml + closeBtnHtml + `
       <div class="verdict-label">最後的問鼎 3 / 5</div>
       <div class="verdict-prompt">柏宇為甚麼沒有被封鎖？</div>
       <textarea class="verdict-textarea" id="verdict-input" placeholder="說出你的推斷..."></textarea>
@@ -1729,7 +1763,7 @@ function renderVerdictStep() {
       <div class="verdict-feedback" id="verdict-feedback"></div>
     `;
   } else if (verdictStep === 4) {
-    box.innerHTML = closeBtnHtml + `
+    box.innerHTML = tokenHtml + closeBtnHtml + `
       <div class="verdict-label">最後的問鼎 4 / 5</div>
       <div class="verdict-prompt">為什麼思妤有愧疚感？</div>
       <textarea class="verdict-textarea" id="verdict-input" placeholder="說出你的推斷..."></textarea>
@@ -1737,7 +1771,7 @@ function renderVerdictStep() {
       <div class="verdict-feedback" id="verdict-feedback"></div>
     `;
   } else if (verdictStep === 5) {
-    box.innerHTML = closeBtnHtml + `
+    box.innerHTML = tokenHtml + closeBtnHtml + `
       <div class="verdict-label">最後的問鼎 5 / 5</div>
       <div class="verdict-prompt">BTW柏宇皮膚這麼黑，那他是黑人嗎？(X)</div>
       <div style="display:flex;gap:12px;margin-top:20px;">
@@ -1773,7 +1807,7 @@ async function submitVerdictAI(stepNum) {
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json','x-api-key':userAPIKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model: MODEL, max_tokens: 200,
         system: sysPrompt,
@@ -1781,6 +1815,7 @@ async function submitVerdictAI(stepNum) {
       })
     });
     const data = await res.json();
+    trackTokens(data);
     const result = data.content?.[0]?.text?.trim() || '';
     if (result === 'PASS') {
       feedback.style.color = 'var(--accent)';
@@ -1826,7 +1861,7 @@ async function showEnding() {
       const targetName = playerName || '你';
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method:'POST',
-        headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        headers:{'Content-Type':'application/json','x-api-key':userAPIKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
         body:JSON.stringify({
           model: MODEL, max_tokens: 380,
           system:`你是個毒舌且很懂見微知著的心理分析師，同時也很愛給人貼標籤。根據這名玩家與別人的對話，以及最後的神作答，狠批他一把。
@@ -1840,6 +1875,7 @@ async function showEnding() {
         })
       });
       const data = await res.json();
+      trackTokens(data);
       document.getElementById('personality-text').innerHTML = (data.content?.[0]?.text||'無法分析。').replace(/\n/g,'<br>');
     } catch(e) { document.getElementById('personality-text').textContent = '無法分析。'; }
   }
