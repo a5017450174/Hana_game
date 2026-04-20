@@ -737,6 +737,13 @@ class GameAudioManager {
     this.fade(this.bgm, 1.0, 3000); 
   }
 
+  stopVerdict() {
+    this.fade(this.bgm, 0, 3000);
+    // Restore ambient for current scene
+    this.fade(this.ambient, 1.0, 3000);
+    this.currentAmbientState = 'normal';
+  }
+
   stopAllForEnding() {
     this.fade(this.bgm, 0, 5000); 
     this.fade(this.ambient, 0, 5000);
@@ -1726,6 +1733,7 @@ function startManualVerdict() {
 
 function closeVerdict() {
   document.getElementById('verdict-modal').classList.remove('show');
+  AudioCtrl.stopVerdict();
 }
 
 // ── VERDICT STATE MACHINE ──────────────────────────────────────────────
