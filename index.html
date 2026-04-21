@@ -2021,7 +2021,7 @@ async function showEnding() {
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':userAPIKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
-        model: MODEL, max_tokens: 420,
+        model: MODEL, max_tokens: 900,
         system:`你是個毒舌且很懂見微知著的心理分析師，同時也很愛給人貼標籤。根據這名玩家與別人的對話，以及最後的神作答，狠批他一把。
 
 【玩家類型判定】：${playerType}
@@ -2032,7 +2032,8 @@ async function showEnding() {
 2. 從對話裡扒出他潛藏的 2 個「性格缺點或盲點」，語氣要刻薄、犀利、帶點黑色幽默，但又要精準得讓人無法反駁。扒的方向請依照上面的【該類型的毒舌切角】調整，不要套錯腳本。
 3. 【必須舉證】精準引用對方真實說過的 2–3 句話穿插在文句中，引用句請用「」標示。如果樣本太少，引用 2 句也可以。
 4. 【最後爆擊】玩家在問鼎階段遇到「柏宇皮膚這麼黑，他是黑人嗎？」這爛問題時，竟然回答：「${q5UserAnswer}」。在報告最後針對他這個回答給予致命吐槽，作為完美的辛辣收尾！
-5. 請用整段式流暢散文撰寫，絕對不可使用「1. 2. 3.」條列式，且一定要自然連貫。字數盡量控制在 250 至 300 字間。`,
+5. 請用整段式流暢散文撰寫，絕對不可使用「1. 2. 3.」條列式，且一定要自然連貫。
+6. 【字數硬規定】**全文總字數（含標點）嚴格控制在 350 字以內**，要寫得夠狠但不要囉嗦。最後一定要留完整句號收尾，不准寫到一半斷掉。規劃時請先想好結尾那一擊要說什麼再開始寫。`,
         messages:[{role:'user', content:`他跟別人聊天時說過這些話：\n${sample}`}]
       })
     });
