@@ -260,6 +260,36 @@
   .verdict-btn:disabled{opacity:0.4;cursor:default;}
   .verdict-feedback{margin-top:16px;font-size:12px;color:var(--text-secondary);letter-spacing:0.05em;line-height:1.8;min-height:20px;}
 
+  /* ── FLOATING VERDICT BUTTON ── */
+  #floating-verdict-btn{position:fixed;bottom:24px;right:24px;z-index:90;padding:14px 24px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:500;letter-spacing:0.25em;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,0.4),0 0 0 1px rgba(255,255,255,0.06);display:none;animation:floatPulse 2.4s ease-in-out infinite;transition:transform 0.2s,box-shadow 0.2s;}
+  #floating-verdict-btn:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.12);}
+  #floating-verdict-btn.show{display:block;}
+  @keyframes floatPulse{0%,100%{box-shadow:0 6px 24px rgba(0,0,0,0.4),0 0 0 1px rgba(255,255,255,0.06);}50%{box-shadow:0 6px 24px rgba(0,0,0,0.4),0 0 0 3px rgba(212,175,55,0.5);}}
+
+  /* ── AUTHOR MODE ── */
+  #author-mode-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;width:560px;max-width:92vw;max-height:85vh;background:#0f0f12;border:1px solid var(--accent);border-radius:8px;box-shadow:0 30px 80px rgba(0,0,0,0.8);display:none;flex-direction:column;font-family:'Noto Sans TC',sans-serif;color:#e6e6e6;}
+  #author-mode-panel.show{display:flex;}
+  .author-header{padding:16px 20px;border-bottom:1px solid #2a2a30;display:flex;align-items:center;justify-content:space-between;}
+  .author-title{font-size:13px;letter-spacing:0.3em;color:var(--accent);}
+  .author-close{background:none;border:none;color:#888;font-size:18px;cursor:pointer;padding:0 6px;}
+  .author-close:hover{color:#fff;}
+  .author-body{padding:18px 20px;overflow-y:auto;flex:1;}
+  .author-section{margin-bottom:22px;}
+  .author-section-title{font-size:11px;letter-spacing:0.25em;color:#888;margin-bottom:10px;text-transform:uppercase;}
+  .author-btn{padding:8px 14px;background:transparent;border:1px solid #3a3a42;color:#e6e6e6;font-family:'Noto Sans TC',sans-serif;font-size:12px;letter-spacing:0.1em;cursor:pointer;border-radius:4px;margin:4px 6px 4px 0;transition:all 0.15s;}
+  .author-btn:hover{background:var(--accent);color:#000;border-color:var(--accent);}
+  .author-btn.danger{border-color:#7a3030;color:#e6a0a0;}
+  .author-btn.danger:hover{background:#7a3030;color:#fff;border-color:#7a3030;}
+  .author-ach-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;}
+  .author-ach-btn{padding:7px 10px;background:transparent;border:1px solid #2a2a30;color:#bbb;font-size:11px;text-align:left;cursor:pointer;border-radius:3px;transition:all 0.15s;font-family:'Noto Sans TC',sans-serif;}
+  .author-ach-btn:hover{background:#1a1a20;border-color:var(--accent);color:#fff;}
+  .author-ach-btn.unlocked{background:#1a2a1a;border-color:#3a5a3a;color:#9ae09a;}
+  .author-ach-btn.unlocked::before{content:'✓ ';color:#9ae09a;}
+  .author-state{background:#1a1a20;border:1px solid #2a2a30;border-radius:4px;padding:10px 12px;font-family:'SF Mono',Consolas,monospace;font-size:11px;color:#b0b0b0;line-height:1.7;white-space:pre-wrap;max-height:160px;overflow-y:auto;}
+  .author-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;}
+  .author-hint-overlay{position:fixed;top:6px;left:6px;z-index:9998;background:rgba(212,175,55,0.85);color:#000;padding:4px 8px;border-radius:3px;font-size:10px;letter-spacing:0.15em;font-family:'Noto Sans TC',sans-serif;pointer-events:none;animation:authorHintFade 1.2s ease-out forwards;}
+  @keyframes authorHintFade{0%{opacity:1;}80%{opacity:0.9;}100%{opacity:0;}}
+
   /* ── ENDING ── */
   #ending-overlay{position:fixed;inset:0;background:rgba(10,10,12,0.97);display:flex;align-items:center;justify-content:center;z-index:400;opacity:0;pointer-events:none;transition:opacity 1s ease;overflow-y:auto;}
   #ending-overlay.show{opacity:1;pointer-events:all;}
@@ -496,6 +526,48 @@
 <div id="verdict-modal">
   <div class="verdict-box" id="verdict-box-container">
     <!-- Injected by renderVerdictStep() -->
+  </div>
+</div>
+
+<!-- FLOATING VERDICT BUTTON (always visible on scene once all required achievements collected) -->
+<button id="floating-verdict-btn" onclick="startManualVerdict()">進入最終作答</button>
+
+<!-- AUTHOR MODE PANEL (triggered by top-left x2 → bottom-left x2 within 10s) -->
+<div id="author-mode-panel">
+  <div class="author-header">
+    <span class="author-title">◆ AUTHOR MODE</span>
+    <button class="author-close" onclick="closeAuthorMode()">✕</button>
+  </div>
+  <div class="author-body">
+    <div class="author-section">
+      <div class="author-section-title">快速動作</div>
+      <div class="author-row">
+        <button class="author-btn" onclick="authorForceUnlockAll()">一鍵解鎖所有必要成就</button>
+        <button class="author-btn" onclick="authorUnlockKai()">解鎖小楷入口</button>
+        <button class="author-btn danger" onclick="authorResetGame()">重置遊戲狀態</button>
+      </div>
+    </div>
+
+    <div class="author-section">
+      <div class="author-section-title">強制進入最終作答</div>
+      <div class="author-row">
+        <button class="author-btn" onclick="authorJumpToVerdict(1)">跳到 Q1</button>
+        <button class="author-btn" onclick="authorJumpToVerdict(2)">跳到 Q2</button>
+        <button class="author-btn" onclick="authorJumpToVerdict(3)">跳到 Q3</button>
+        <button class="author-btn" onclick="authorJumpToVerdict(4)">跳到 Q4</button>
+        <button class="author-btn" onclick="authorJumpToVerdict(5)">跳到 Q5</button>
+      </div>
+    </div>
+
+    <div class="author-section">
+      <div class="author-section-title">強制解鎖特定成就</div>
+      <div id="author-ach-grid" class="author-ach-grid"></div>
+    </div>
+
+    <div class="author-section">
+      <div class="author-section-title">目前狀態</div>
+      <div id="author-state-dump" class="author-state">—</div>
+    </div>
   </div>
 </div>
 
@@ -1118,6 +1190,7 @@ function startGame() {
   fadeOut('prologue-screen', () => {
     document.getElementById('scene-mode').classList.add('visible');
     loadScene(0);
+    updateProgress(); // 場景載入後立刻讓 floating 作答按鈕出現
   });
 }
 function fadeOut(id, cb) {
@@ -1544,6 +1617,8 @@ async function sendMessage() {
       setLoading(false);
     }
 
+    const prevAchCount = achievements.length;
+    const prevClueCount = clues.length;
     if (parsed.clue) { const arr = Array.isArray(parsed.clue)?parsed.clue:[parsed.clue]; arr.forEach(c=>{ if(c) addClue(c, npc.name); }); }
     if (parsed.achievement) { const arr = Array.isArray(parsed.achievement)?parsed.achievement:[parsed.achievement]; arr.forEach(a=>{ if(a){ addAchievement(a, targetNpc); if(a==='kai_unlocked') unlockNpc('kai'); } }); }
 
@@ -1571,6 +1646,39 @@ async function sendMessage() {
       addAchievement('kai_unlocked', targetNpc);
       unlockNpc('kai');
     }
+
+    // 解開線索/成就時，這句玩家訊息強制升級為「高相關」（涵蓋 AI JSON 與前端保險兩種觸發路徑）
+    const unlockedSomething = achievements.length > prevAchCount || clues.length > prevClueCount;
+    if (unlockedSomething && rel !== 'high') {
+      if (relCounts[rel] > 0) relCounts[rel]--;
+      relCounts.high++;
+      consecutiveLowCount[targetNpc] = 0; // 解到東西時重置卡關計數
+      if (allPlayerMessages.length > 0) {
+        allPlayerMessages[allPlayerMessages.length - 1].rel = 'high';
+      }
+      const hist = chatHistories[targetNpc];
+      for (let i = hist.length - 1; i >= 0; i--) {
+        if (hist[i].role === 'user' && !hist[i].hidden) {
+          hist[i].rel = 'high';
+          break;
+        }
+      }
+      // 更新正在顯示中的訊息泡泡的相關度標籤
+      if (currentNpc === targetNpc) {
+        const msgs = document.getElementById('phone-messages');
+        const selfBubbles = msgs.querySelectorAll('.msg-group.self');
+        if (selfBubbles.length > 0) {
+          const lastBubble = selfBubbles[selfBubbles.length - 1];
+          const tag = lastBubble.querySelector('.rel-tag');
+          if (tag) {
+            tag.classList.remove('rel-low','rel-mid');
+            tag.classList.add('rel-high');
+            tag.textContent = '高相關';
+          }
+        }
+      }
+    }
+
     checkVerdictReady();
   } catch(e) { 
     npcTyping[targetNpc] = false;
@@ -1712,11 +1820,19 @@ function updateProgress() {
   const foundReq = REQUIRED_ACHIEVEMENTS.filter(a => achievements.includes(a)).length;
   const pct = Math.round((foundReq / TOTAL_REQUIRED) * 100);
   document.getElementById('progress-fill').style.width = pct+'%';
-  
+
   const hasRomance = achievements.includes('si_wavered') ? ' ❤️' : '';
   document.getElementById('progress-text').textContent = pct + '%' + hasRomance;
-  
+
   if (foundReq > 0) renderPhoneContacts(); // ensure contact labels update
+
+  // Floating verdict button: 進入遊戲場景後一直顯示，通關後才隱藏
+  const floatBtn = document.getElementById('floating-verdict-btn');
+  if (floatBtn) {
+    const sceneActive = document.getElementById('scene-mode')?.classList.contains('visible');
+    const visible = sceneActive && !verdictPassed;
+    floatBtn.classList.toggle('show', visible);
+  }
 }
 
 function checkVerdictReady() {
@@ -1725,6 +1841,7 @@ function checkVerdictReady() {
 
 function startManualVerdict() {
   if (verdictPassed) return;
+  // 開放隨時作答（不再要求收齊所有必要成就）
   AudioCtrl.playVerdict();
   verdictStep = 1;
   document.getElementById('verdict-modal').classList.add('show');
@@ -1837,6 +1954,8 @@ function submitVerdictFinal(answer) {
   q5UserAnswer = answer;
   document.getElementById('verdict-modal').classList.remove('show');
   verdictPassed = true;
+  const floatBtn = document.getElementById('floating-verdict-btn');
+  if (floatBtn) floatBtn.classList.remove('show');
   showEnding();
 }
 
@@ -1920,8 +2039,159 @@ function setLoading(val) {
 }
 function escapeHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
 
+// ── AUTHOR MODE ──────────────────────────────────────────────────────
+// 觸發手勢：畫面左上角點兩下 → 10 秒內畫面左下角點兩下 → 開啟作者面板
+const AUTHOR_CORNER_SIZE = 80;     // px，角落判定範圍
+const AUTHOR_DOUBLE_WINDOW = 800;  // ms，兩次點擊算「連點」的時間窗
+const AUTHOR_PHASE_TIMEOUT = 10000; // ms，第一段完成後等待第二段的時限
+let authorPhase = 0;       // 0=idle, 1=已完成左上 x2，等左下 x2
+let authorTLClicks = [];
+let authorBLClicks = [];
+let authorPhaseTimer = null;
+
+function authorShowHint(text) {
+  const el = document.createElement('div');
+  el.className = 'author-hint-overlay';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1300);
+}
+
+function authorHandleClick(e) {
+  // 作者面板開啟時不再處理手勢
+  if (document.getElementById('author-mode-panel').classList.contains('show')) return;
+  const x = e.clientX, y = e.clientY;
+  const w = window.innerWidth, h = window.innerHeight;
+  const inTL = x < AUTHOR_CORNER_SIZE && y < AUTHOR_CORNER_SIZE;
+  const inBL = x < AUTHOR_CORNER_SIZE && y > h - AUTHOR_CORNER_SIZE;
+  const now = Date.now();
+
+  if (authorPhase === 0 && inTL) {
+    authorTLClicks.push(now);
+    authorTLClicks = authorTLClicks.filter(t => now - t < AUTHOR_DOUBLE_WINDOW);
+    if (authorTLClicks.length >= 2) {
+      authorPhase = 1;
+      authorTLClicks = [];
+      authorShowHint('◆ 1/2');
+      if (authorPhaseTimer) clearTimeout(authorPhaseTimer);
+      authorPhaseTimer = setTimeout(() => {
+        authorPhase = 0;
+        authorBLClicks = [];
+      }, AUTHOR_PHASE_TIMEOUT);
+    }
+  } else if (authorPhase === 1 && inBL) {
+    authorBLClicks.push(now);
+    authorBLClicks = authorBLClicks.filter(t => now - t < AUTHOR_DOUBLE_WINDOW);
+    if (authorBLClicks.length >= 2) {
+      if (authorPhaseTimer) { clearTimeout(authorPhaseTimer); authorPhaseTimer = null; }
+      authorPhase = 0;
+      authorBLClicks = [];
+      openAuthorMode();
+    }
+  }
+}
+
+function openAuthorMode() {
+  renderAuthorAchGrid();
+  renderAuthorStateDump();
+  document.getElementById('author-mode-panel').classList.add('show');
+}
+
+function closeAuthorMode() {
+  document.getElementById('author-mode-panel').classList.remove('show');
+}
+
+function renderAuthorAchGrid() {
+  const grid = document.getElementById('author-ach-grid');
+  grid.innerHTML = '';
+  Object.keys(ACH_META).forEach(key => {
+    const meta = ACH_META[key];
+    const owned = achievements.includes(key);
+    const btn = document.createElement('button');
+    btn.className = 'author-ach-btn' + (owned ? ' unlocked' : '');
+    btn.innerHTML = `<strong>${meta.name}</strong> <span style="opacity:0.55;">[${key}]</span>`;
+    btn.title = meta.desc || '';
+    btn.onclick = () => {
+      if (!achievements.includes(key)) {
+        addAchievement(key, meta.npc);
+        if (key === 'kai_unlocked') unlockNpc('kai');
+      }
+      renderAuthorAchGrid();
+      renderAuthorStateDump();
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function renderAuthorStateDump() {
+  const foundReq = REQUIRED_ACHIEVEMENTS.filter(a => achievements.includes(a)).length;
+  const dump = [
+    `playerName     : ${playerName || '(未設定)'}`,
+    `currentScene   : ${currentScene} (${SCENE_NAMES[currentScene] || '?'})`,
+    `phoneView      : ${phoneView}`,
+    `phoneChatTarget: ${phoneChatTarget || '(無)'}`,
+    `verdictPassed  : ${verdictPassed}`,
+    `verdictStep    : ${verdictStep}`,
+    `必要成就       : ${foundReq} / ${TOTAL_REQUIRED}`,
+    `已解鎖成就     : ${achievements.length} 條`,
+    `已收集線索     : ${clues.length} 條`,
+    `對話相關度     : high=${relCounts.high} mid=${relCounts.mid} low=${relCounts.low}`,
+    `小楷狀態       : ${NPCS && NPCS.kai ? (NPCS.kai.locked ? '鎖定' : '已解鎖') : 'N/A'}`,
+  ].join('\n');
+  document.getElementById('author-state-dump').textContent = dump;
+}
+
+function authorForceUnlockAll() {
+  forceUnlockAll();
+  renderAuthorAchGrid();
+  renderAuthorStateDump();
+}
+
+function authorUnlockKai() {
+  if (NPCS && NPCS.kai && NPCS.kai.locked) unlockNpc('kai');
+  if (!achievements.includes('kai_unlocked')) addAchievement('kai_unlocked', 'siyu');
+  renderAuthorAchGrid();
+  renderAuthorStateDump();
+}
+
+function authorJumpToVerdict(step) {
+  if (verdictPassed) { authorShowHint('已通關'); return; }
+  // bypass 必要成就門檻
+  AudioCtrl.playVerdict();
+  verdictStep = step;
+  document.getElementById('verdict-modal').classList.add('show');
+  renderVerdictStep();
+  closeAuthorMode();
+}
+
+function authorResetGame() {
+  if (!confirm('重置遊戲狀態？所有成就、線索、對話歷史會被清空（不會 reload 頁面）。')) return;
+  achievements = [];
+  clues = [];
+  achievementSources = {};
+  allPlayerMessages = [];
+  relCounts = { high:0, mid:0, low:0 };
+  consecutiveLowCount = { siyu:0, boyu:0, kai:0 };
+  verdictPassed = false;
+  verdictStep = 1;
+  q5UserAnswer = '';
+  if (typeof chatHistories === 'object' && chatHistories) {
+    Object.keys(chatHistories).forEach(k => chatHistories[k] = []);
+  }
+  // 重新鎖回小楷
+  if (NPCS && NPCS.kai) NPCS.kai.locked = true;
+  updateProgress();
+  if (typeof renderAchList === 'function') renderAchList();
+  renderPhoneContacts();
+  renderAuthorAchGrid();
+  renderAuthorStateDump();
+  authorShowHint('已重置');
+}
+
 // ── INIT ─────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('click', authorHandleClick, true);
+
   const input = document.getElementById('phone-input');
   input.addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} });
   input.addEventListener('input', ()=>{ input.style.height='auto'; input.style.height=Math.min(input.scrollHeight,80)+'px'; });
