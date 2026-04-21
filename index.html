@@ -1980,31 +1980,71 @@ async function showEnding() {
   document.getElementById('ending-congrats').style.display = 'block';
   document.getElementById('default-ending-close').style.display = 'none';
 
-  const lowMsgs = allPlayerMessages.filter(m=>m.rel==='low').map(m=>m.text);
-  if (lowMsgs.length > 0) {
-    document.getElementById('ending-personality').style.display = 'block';
-    try {
-      const sample = lowMsgs.slice(0, 12).join('\n');
-      const targetName = playerName || '你';
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method:'POST',
-        headers:{'Content-Type':'application/json','x-api-key':userAPIKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-        body:JSON.stringify({
-          model: MODEL, max_tokens: 380,
-          system:`你是個毒舌且很懂見微知著的心理分析師，同時也很愛給人貼標籤。根據這名玩家與別人的對話，以及最後的神作答，狠批他一把。
+  // 個性分析一律執行（不再因弱相關=0 而跳過）
+  document.getElementById('ending-personality').style.display = 'block';
+  document.getElementById('personality-text').textContent = '分析中…';
+
+  const lowMsgs = allPlayerMessages.filter(m => m.rel === 'low');
+  const midMsgs = allPlayerMessages.filter(m => m.rel === 'mid');
+
+  // 取樣優先順序：弱相關 → 不夠補中相關 → 都沒有就全拿
+  let sampleMsgs;
+  if (lowMsgs.length >= 3) {
+    sampleMsgs = lowMsgs.slice(0, 12);
+  } else if (lowMsgs.length + midMsgs.length > 0) {
+    sampleMsgs = [...lowMsgs, ...midMsgs].slice(0, 12);
+  } else {
+    sampleMsgs = allPlayerMessages.slice(0, 12);
+  }
+
+  // 分類玩家類型（讓 AI 根據類型切換毒舌角度）
+  const lowPct = total ? (lowMsgs.length / total) : 0;
+  let playerType, typeBrief;
+  if (total < 3) {
+    playerType = '惜字如金型';
+    typeBrief = '玩家全程幾乎沒說什麼話，冷漠、懶得投入，連讓你扒的素材都沒給。請嘲諷他這種省話到近乎無感的態度，像在辦業務一樣無情。';
+  } else if (lowPct <= 0.10) {
+    playerType = '效率型';
+    typeBrief = '玩家全程幾乎沒廢話，一句一挖料、每個字都在辦案。請切角嘲諷他把朋友當資料庫、工具化、零情感投入、像在做功課而不是在關心人。這種人表面上冷靜理性，實際上可能連真正的關心都不會表達，朋友對他來說只是「可用資產」。');
+  } else if (lowPct >= 0.30) {
+    playerType = '廢話型';
+    typeBrief = '玩家對話裡有不少無關緊要的廢話。請從那些偏離主題的句子裡扒出他的性格缺點——逃避正題、不敢切入重點、怕尷尬用廢話填場、或者根本搞不清楚狀況的浮誇等等。';
+  } else {
+    playerType = '混合型';
+    typeBrief = '玩家的表現不上不下——有時在挖料有時在閒扯。請毒舌他這種「想認真又不夠認真、想放鬆又不夠放鬆」的尷尬狀態，抓出他拿捏不準輕重的毛病。';
+  }
+
+  try {
+    const sample = sampleMsgs.map(m => m.text).join('\n');
+    const targetName = playerName || '你';
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':userAPIKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model: MODEL, max_tokens: 420,
+        system:`你是個毒舌且很懂見微知著的心理分析師，同時也很愛給人貼標籤。根據這名玩家與別人的對話，以及最後的神作答，狠批他一把。
+
+【玩家類型判定】：${playerType}
+【該類型的毒舌切角】：${typeBrief}
+
 規則：
 1. 主詞請一律使用「${targetName}」（例如：「${targetName}這傢伙根本...」）。
-2. 從對話中扒出他潛藏的2個「性格缺點或盲點」，語氣要刻薄、犀利、帶點黑色幽默，但又要精準得讓人無法反駁。
-3. 【必須舉證】為了讓你的毒舌有理有據，務必精確引用對方真實說過的「3句話」穿插在文句中（觀點一用2句，觀點二用1句），引用的句子請用「」標示。
-4. 【最後爆擊】玩家在問鼎階段遇到「柏宇皮膚這麼黑，他是黑人嗎？」這爛問題時，竟然回答：「${q5UserAnswer}」。在報告最後，請針對他這個好笑的回答給予致命的吐槽，做為完美的辛辣收尾！
-5. 請用整段式的流暢散文撰寫，絕對不可使用「1. 2. 3.」條列式、且一定要自然連貫。字數盡量控制在250至300字間。`,
-          messages:[{role:'user',content:`他跟別人聊天時說過這些話：\n${sample}`}]
-        })
-      });
-      const data = await res.json();
-      trackTokens(data);
-      document.getElementById('personality-text').innerHTML = (data.content?.[0]?.text||'無法分析。').replace(/\n/g,'<br>');
-    } catch(e) { document.getElementById('personality-text').textContent = '無法分析。'; }
+2. 從對話裡扒出他潛藏的 2 個「性格缺點或盲點」，語氣要刻薄、犀利、帶點黑色幽默，但又要精準得讓人無法反駁。扒的方向請依照上面的【該類型的毒舌切角】調整，不要套錯腳本。
+3. 【必須舉證】精準引用對方真實說過的 2–3 句話穿插在文句中，引用句請用「」標示。如果樣本太少，引用 2 句也可以。
+4. 【最後爆擊】玩家在問鼎階段遇到「柏宇皮膚這麼黑，他是黑人嗎？」這爛問題時，竟然回答：「${q5UserAnswer}」。在報告最後針對他這個回答給予致命吐槽，作為完美的辛辣收尾！
+5. 請用整段式流暢散文撰寫，絕對不可使用「1. 2. 3.」條列式，且一定要自然連貫。字數盡量控制在 250 至 300 字間。`,
+        messages:[{role:'user', content:`他跟別人聊天時說過這些話：\n${sample}`}]
+      })
+    });
+    const data = await res.json();
+    trackTokens(data);
+    if (data.error) throw new Error(data.error.message || 'api error');
+    const text = data.content?.[0]?.text;
+    if (!text) throw new Error('no content');
+    document.getElementById('personality-text').innerHTML = text.replace(/\n/g,'<br>');
+  } catch(e) {
+    document.getElementById('personality-text').innerHTML =
+      `（個性分析暫時生成失敗：${(e && e.message) || '未知錯誤'}）<br>不過從你的對話紀錄可以看出——你是「${playerType}」。${typeBrief.replace(/請.*?。/g,'').trim()}`;
   }
 }
 function closeEnding() { document.getElementById('ending-overlay').classList.remove('show'); }
