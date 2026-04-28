@@ -594,6 +594,9 @@
       <div class="ending-stats-title">你的偵探報告</div>
       <div class="stat-row"><span class="stat-label">玩家名稱</span><span class="stat-value" id="stat-name">—</span></div>
       <div class="stat-row"><span class="stat-label">總共說了</span><span class="stat-value" id="stat-total">—</span></div>
+      <div class="stat-row"><span class="stat-label">總字數</span><span class="stat-value" id="stat-chars">—</span></div>
+      <div class="stat-row"><span class="stat-label">消耗 Tokens</span><span class="stat-value" id="stat-tokens">—</span></div>
+      <div class="stat-row"><span class="stat-label">換算成本</span><span class="stat-value" id="stat-cost">—</span></div>
       <div class="rel-bars">
         <div class="rel-bar-wrap"><div class="rel-bar-track"><div class="rel-bar-fill high" id="bar-high" style="height:0%"></div></div><div class="rel-bar-label">高相關</div><div class="rel-bar-pct" id="pct-high">0%</div></div>
         <div class="rel-bar-wrap"><div class="rel-bar-track"><div class="rel-bar-fill mid" id="bar-mid" style="height:0%"></div></div><div class="rel-bar-label">中相關</div><div class="rel-bar-pct" id="pct-mid">0%</div></div>
@@ -664,7 +667,8 @@ const AUDIO_FILES = {
   relevance: 'assets/audio/文字相關的音樂.mp3',
   verdict: 'assets/audio/玩家要做答的時候播放的音樂.mp3',
   msgSend: 'assets/audio/玩家傳送訊息.mp3',
-  msgReceive: 'assets/audio/收到訊息.mp3'
+  msgReceive: 'assets/audio/收到訊息.mp3',
+  gameEnd: 'assets/audio/遊戲結束.mp3'
 };
 
 class GameAudioManager {
@@ -817,9 +821,27 @@ class GameAudioManager {
   }
 
   stopAllForEnding() {
-    this.fade(this.bgm, 0, 5000); 
+    this.fade(this.bgm, 0, 5000);
     this.fade(this.ambient, 0, 5000);
     this.fade(this.relevance, 0, 5000);
+  }
+
+  playGameEnd() {
+    // 把目前所有正在播放的音訊快速淡出，然後播放「遊戲結束」音樂（不 loop）
+    this.fade(this.bgm, 0, 1500);
+    this.fade(this.ambient, 0, 1500);
+    this.fade(this.relevance, 0, 1500);
+    setTimeout(() => {
+      try {
+        this.bgm.pause();
+        this.bgm.loop = false;
+        this.bgm.src = AUDIO_FILES.gameEnd;
+        this.bgm.currentTime = 0;
+        this.bgm.volume = 0;
+        this.bgm.play().catch(e=>console.log("gameEnd play blocked", e));
+        this.fade(this.bgm, 1.0, 2000);
+      } catch(e) { console.log("playGameEnd error", e); }
+    }, 1600);
   }
 }
 
@@ -2021,10 +2043,19 @@ function submitVerdictFinal(answer) {
 
 // ── ENDING ───────────────────────────────────────────────────────────
 async function showEnding() {
-  AudioCtrl.stopAllForEnding();
+  AudioCtrl.playGameEnd();
   const total = allPlayerMessages.length;
+  // 計算總字數（去掉空白與換行才算字）
+  const totalChars = allPlayerMessages.reduce((sum, m) => {
+    const t = (m && m.text) ? String(m.text).replace(/\s+/g,'') : '';
+    return sum + t.length;
+  }, 0);
   document.getElementById('stat-name').textContent = playerName;
   document.getElementById('stat-total').textContent = total + ' 句話';
+  document.getElementById('stat-chars').textContent = totalChars.toLocaleString() + ' 字';
+  const totalTokens = tokenUsage.input + tokenUsage.output;
+  document.getElementById('stat-tokens').textContent = totalTokens.toLocaleString() + ' tokens';
+  document.getElementById('stat-cost').textContent = 'NT$ ' + getTokenCostNTD();
   const hi=relCounts.high,mi=relCounts.mid,lo=relCounts.low;
   const pctH=total?Math.round(hi/total*100):0, pctM=total?Math.round(mi/total*100):0, pctL=total?Math.round(lo/total*100):0;
   document.getElementById('pct-high').textContent=pctH+'%';
