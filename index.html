@@ -264,6 +264,21 @@
   #floating-verdict-btn{position:fixed;bottom:24px;right:24px;z-index:90;padding:14px 24px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:500;letter-spacing:0.25em;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,0.4),0 0 0 1px rgba(255,255,255,0.06);display:none;animation:floatPulse 2.4s ease-in-out infinite;transition:transform 0.2s,box-shadow 0.2s;}
   #floating-verdict-btn:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.12);}
   #floating-verdict-btn.show{display:block;}
+
+  /* Volume control (top-right) */
+  #volume-control{position:fixed;top:16px;right:16px;z-index:95;font-family:'Noto Sans TC',sans-serif;}
+  #volume-toggle{width:38px;height:38px;border-radius:50%;background:rgba(15,15,18,0.7);border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;transition:all 0.2s ease;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:0;}
+  #volume-toggle:hover{color:var(--text-primary);border-color:var(--accent);background:rgba(15,15,18,0.9);}
+  #volume-toggle.muted{color:#7a3030;}
+  #volume-panel{position:absolute;top:46px;right:0;background:rgba(15,15,18,0.95);border:1px solid var(--border);border-radius:6px;padding:14px 16px;width:220px;display:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,0.5);}
+  #volume-panel.show{display:block;}
+  .vol-row{margin-bottom:12px;}
+  .vol-row:last-child{margin-bottom:0;}
+  .vol-label{font-size:11px;color:var(--text-secondary);letter-spacing:0.18em;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
+  .vol-label span:last-child{color:var(--text-muted);font-family:'SF Mono',Consolas,monospace;letter-spacing:0;font-size:10px;}
+  .vol-slider{width:100%;-webkit-appearance:none;appearance:none;height:3px;background:var(--border);border-radius:2px;outline:none;cursor:pointer;}
+  .vol-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;background:var(--accent);border-radius:50%;cursor:pointer;border:none;}
+  .vol-slider::-moz-range-thumb{width:13px;height:13px;background:var(--accent);border-radius:50%;cursor:pointer;border:none;}
   @keyframes floatPulse{0%,100%{box-shadow:0 6px 24px rgba(0,0,0,0.4),0 0 0 1px rgba(255,255,255,0.06);}50%{box-shadow:0 6px 24px rgba(0,0,0,0.4),0 0 0 3px rgba(212,175,55,0.5);}}
 
   /* ── AUTHOR MODE ── */
@@ -532,6 +547,23 @@
 <!-- FLOATING VERDICT BUTTON (always visible on scene once all required achievements collected) -->
 <button id="floating-verdict-btn" onclick="startManualVerdict()">進入最終作答</button>
 
+<!-- Volume Control -->
+<div id="volume-control">
+  <button id="volume-toggle" onclick="toggleVolumePanel(event)" title="音量設定" aria-label="音量設定">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+  </button>
+  <div id="volume-panel">
+    <div class="vol-row">
+      <div class="vol-label"><span>背景音樂</span><span id="vol-bgm-num">100</span></div>
+      <input type="range" class="vol-slider" id="vol-bgm" min="0" max="100" value="100" oninput="onVolBgmChange(this.value)">
+    </div>
+    <div class="vol-row">
+      <div class="vol-label"><span>環境音</span><span id="vol-ambient-num">100</span></div>
+      <input type="range" class="vol-slider" id="vol-ambient" min="0" max="100" value="100" oninput="onVolAmbientChange(this.value)">
+    </div>
+  </div>
+</div>
+
 <!-- AUTHOR MODE PANEL (triggered by top-left x2 → bottom-left x2 within 10s) -->
 <div id="author-mode-panel">
   <div class="author-header">
@@ -673,29 +705,76 @@ const AUDIO_FILES = {
 
 class GameAudioManager {
   constructor() {
+    // User-controlled master volumes (persisted)
+    this.userBgmVol = this._loadVol('userBgmVol', 1.0);
+    this.userAmbientVol = this._loadVol('userAmbientVol', 1.0);
+
     this.bgm = new Audio();
     this.bgm.loop = true;
-    
+    this._tag(this.bgm, 'bgm');
+
     this.ambient = new Audio();
     this.ambient.loop = true;
-    
+    this._tag(this.ambient, 'ambient');
+
     this.relevance = new Audio();
     this.relevance.loop = true;
+    this._tag(this.relevance, 'bgm'); // relevance cue follows BGM channel
 
     this.relevanceTimer = null;
     this.currentAmbientState = 'normal'; // normal, faded
   }
 
+  _loadVol(key, dflt) {
+    try {
+      const v = localStorage.getItem(key);
+      if (v == null) return dflt;
+      const n = parseFloat(v);
+      return isNaN(n) ? dflt : Math.max(0, Math.min(1, n));
+    } catch(e) { return dflt; }
+  }
+  _saveVol(key, v) {
+    try { localStorage.setItem(key, String(v)); } catch(e) {}
+  }
+  _tag(audioElement, channel) {
+    audioElement._channel = channel;
+    audioElement._intent = 0;
+  }
+  _master(channel) {
+    return channel === 'ambient' ? this.userAmbientVol : this.userBgmVol;
+  }
+  _applyVolume(audioElement) {
+    if (!audioElement) return;
+    const ch = audioElement._channel || 'bgm';
+    const intent = (typeof audioElement._intent === 'number') ? audioElement._intent : audioElement.volume;
+    let v = intent * this._master(ch);
+    if (v < 0) v = 0; if (v > 1) v = 1;
+    audioElement.volume = v;
+  }
+
+  setUserBgmVolume(v) {
+    this.userBgmVol = Math.max(0, Math.min(1, v));
+    this._saveVol('userBgmVol', this.userBgmVol);
+    this._applyVolume(this.bgm);
+    this._applyVolume(this.relevance);
+  }
+  setUserAmbientVolume(v) {
+    this.userAmbientVol = Math.max(0, Math.min(1, v));
+    this._saveVol('userAmbientVol', this.userAmbientVol);
+    this._applyVolume(this.ambient);
+  }
+
   fade(audioElement, targetVol, durationMS) {
     if(!audioElement) return;
-    const startVol = audioElement.volume;
-    const diff = targetVol - startVol;
+    // ensure tracking fields exist (for newly-created Audio elements)
+    if (!audioElement._channel) this._tag(audioElement, 'bgm');
+    const startIntent = (typeof audioElement._intent === 'number') ? audioElement._intent : audioElement.volume;
+    const diff = targetVol - startIntent;
     const steps = 20;
     const stepTime = durationMS / steps;
-    const stepVol = diff / steps;
-    
+
     if(audioElement.fadeInterval) clearInterval(audioElement.fadeInterval);
-    
+
     if (targetVol > 0 && audioElement.paused) {
       audioElement.play().catch(e=>console.log("Audio play blocked", e));
     }
@@ -703,16 +782,18 @@ class GameAudioManager {
     let currentStep = 0;
     audioElement.fadeInterval = setInterval(() => {
       currentStep++;
-      let newVol = startVol + (stepVol * currentStep);
-      // clamp
-      if(newVol < 0) newVol = 0;
-      if(newVol > 1) newVol = 1;
-      
-      audioElement.volume = newVol;
-      
+      let newIntent = startIntent + (diff * currentStep / steps);
+      // clamp intent
+      if(newIntent < 0) newIntent = 0;
+      if(newIntent > 1) newIntent = 1;
+
+      audioElement._intent = newIntent;
+      this._applyVolume(audioElement);
+
       if(currentStep >= steps) {
         clearInterval(audioElement.fadeInterval);
-        audioElement.volume = targetVol;
+        audioElement._intent = targetVol;
+        this._applyVolume(audioElement);
         if(targetVol === 0) {
           audioElement.pause();
         }
@@ -723,6 +804,7 @@ class GameAudioManager {
   playIntro() {
     this.bgm.src = AUDIO_FILES.intro;
     this.bgm.currentTime = 0;
+    this.bgm._intent = 0;
     this.bgm.volume = 0;
     this.fade(this.bgm, 1.0, 1500);
   }
@@ -749,12 +831,14 @@ class GameAudioManager {
     const oldAmbient = this.ambient;
     const newAmbient = new Audio(nextSrc);
     newAmbient.loop = true;
+    this._tag(newAmbient, 'ambient');
     newAmbient.volume = 0;
-    
+
     if (this.currentAmbientState === 'normal') {
       this.fade(newAmbient, 1.0, 1500);
     } else {
-      newAmbient.volume = 0; 
+      newAmbient._intent = 0;
+      newAmbient.volume = 0;
       newAmbient.play().catch(()=>{});
     }
 
@@ -774,6 +858,7 @@ class GameAudioManager {
 
     if (!this.relevance.src) {
       this.relevance.src = AUDIO_FILES.relevance;
+      this.relevance._intent = 0;
       this.relevance.volume = 0;
     }
 
@@ -809,8 +894,9 @@ class GameAudioManager {
 
     this.bgm.src = AUDIO_FILES.verdict;
     this.bgm.currentTime = 0;
+    this.bgm._intent = 0;
     this.bgm.volume = 0;
-    this.fade(this.bgm, 1.0, 3000); 
+    this.fade(this.bgm, 1.0, 3000);
   }
 
   stopVerdict() {
@@ -837,6 +923,7 @@ class GameAudioManager {
         this.bgm.loop = false;
         this.bgm.src = AUDIO_FILES.gameEnd;
         this.bgm.currentTime = 0;
+        this.bgm._intent = 0;
         this.bgm.volume = 0;
         this.bgm.play().catch(e=>console.log("gameEnd play blocked", e));
         this.fade(this.bgm, 1.0, 2000);
@@ -846,6 +933,56 @@ class GameAudioManager {
 }
 
 const AudioCtrl = new GameAudioManager();
+
+// ── VOLUME CONTROL UI ─────────────────────────────────────────────────
+function toggleVolumePanel(e) {
+  if (e) e.stopPropagation();
+  const panel = document.getElementById('volume-panel');
+  if (panel) panel.classList.toggle('show');
+}
+function onVolBgmChange(v) {
+  const n = parseInt(v, 10);
+  const lbl = document.getElementById('vol-bgm-num');
+  if (lbl) lbl.textContent = n;
+  AudioCtrl.setUserBgmVolume(n / 100);
+  refreshVolumeMutedIcon();
+}
+function onVolAmbientChange(v) {
+  const n = parseInt(v, 10);
+  const lbl = document.getElementById('vol-ambient-num');
+  if (lbl) lbl.textContent = n;
+  AudioCtrl.setUserAmbientVolume(n / 100);
+  refreshVolumeMutedIcon();
+}
+function refreshVolumeMutedIcon() {
+  const btn = document.getElementById('volume-toggle');
+  if (!btn) return;
+  const muted = AudioCtrl.userBgmVol === 0 && AudioCtrl.userAmbientVol === 0;
+  btn.classList.toggle('muted', muted);
+}
+// Initial sync of slider positions from persisted state, and click-outside-to-close
+document.addEventListener('DOMContentLoaded', () => {
+  const bgmPct = Math.round(AudioCtrl.userBgmVol * 100);
+  const ambPct = Math.round(AudioCtrl.userAmbientVol * 100);
+  const bgmS = document.getElementById('vol-bgm');
+  const ambS = document.getElementById('vol-ambient');
+  const bgmN = document.getElementById('vol-bgm-num');
+  const ambN = document.getElementById('vol-ambient-num');
+  if (bgmS) bgmS.value = bgmPct;
+  if (ambS) ambS.value = ambPct;
+  if (bgmN) bgmN.textContent = bgmPct;
+  if (ambN) ambN.textContent = ambPct;
+  refreshVolumeMutedIcon();
+
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('volume-panel');
+    const ctl = document.getElementById('volume-control');
+    if (!panel || !ctl) return;
+    if (panel.classList.contains('show') && !ctl.contains(e.target)) {
+      panel.classList.remove('show');
+    }
+  });
+});
 
 // ── PLAYER STATE ──────────────────────────────────────────────────────
 let playerName = '你';
