@@ -2037,35 +2037,58 @@ async function submitVerdictAI(stepNum) {
   const feedback = document.getElementById('verdict-feedback');
   btn.disabled = true; feedback.textContent = '判斷中……';
 
-  let sysPrompt = '';
+  let truth = '', hit = '';
   if (stepNum === 1) {
-    sysPrompt = `你是判斷器。真相：小花把秘密只給玩家，玩家卻當成談資跟小楷說了。小花無法接受的是「信任被踐踏」。判斷玩家是否命中「破壞信任/隨便當談資出賣她」或者「小花喜歡我/對我有好感」核心。請給予極大寬容度，只要文字有觸及這兩種意思之一（不管夾帶多少雜訊），直接給予通過，只回答：PASS。未命中請給一句話引導，且不超過30字。`;
+    truth = '小花把秘密只給玩家，玩家卻當成談資跟小楷說了。小花無法接受的是「信任被踐踏」。';
+    hit = '「破壞信任/隨便當談資出賣她」或者「小花喜歡我/對我有好感」核心。極大寬容度，文字觸及這兩種意思之一即算 PASS。';
   } else if (stepNum === 2) {
-    sysPrompt = `你是判斷器。真相：小楷在吃飯時大力推銷醫療險，他以為人家覺得他是直銷/一直推銷保險很煩所以不理他。判斷玩家是否命中「以為在推銷醫療險/保險/做直銷所以覺得煩」核心。請給予極大寬容度，只要提到推銷保險/直銷的概念即算通過，只回答：PASS。未命中請給一句話引導，且不超過30字。`;
+    truth = '小楷在吃飯時大力推銷醫療險，他以為人家覺得他是直銷/一直推銷保險很煩所以不理他。';
+    hit = '「以為在推銷醫療險/保險/做直銷所以覺得煩」核心。極大寬容度，提到推銷保險/直銷的概念即算 PASS。';
   } else if (stepNum === 3) {
-    sysPrompt = `你是判斷器。真相：只有柏宇親自跑去找小花問出真相並解開誤會。判斷玩家是否命中「他親自去找過小花」或「他早就直接去問清楚了」核心。請給予極大寬容度，只要有『親自去確認過』的意思即算通過，只回答：PASS。未命中請給一句話引導，且不超過30字。`;
+    truth = '只有柏宇親自跑去找小花問出真相並解開誤會。';
+    hit = '「他親自去找過小花」或「他早就直接去問清楚了」核心。極大寬容度，有『親自去確認過』的意思即算 PASS。';
   } else if (stepNum === 4) {
-    sysPrompt = `你是判斷器。真相：思妤慶功宴當晚有看到玩家跟小楷咬耳朵，但這一年來她選擇當沉默的幫兇，完全沒有去關心小花。判斷玩家是否命中「她明明有看到卻沒幫忙/當冷眼旁觀的幫兇/沒有去關心小花」核心。請給予極大寬容度，只要能意會出『旁觀、沒介入、袖手旁觀導致愧疚』的意思即算通過，只回答：PASS。未命中請給一句話引導，且不超過30字。`;
+    truth = '思妤慶功宴當晚有看到玩家跟小楷咬耳朵，但這一年來她選擇當沉默的幫兇，完全沒有去關心小花。';
+    hit = '「她明明有看到卻沒幫忙/當冷眼旁觀的幫兇/沒有去關心小花」核心。極大寬容度，能意會出『旁觀、沒介入、袖手旁觀導致愧疚』的意思即算 PASS。';
   }
+
+  const sysPrompt = `你是判斷器。真相：${truth}
+判斷玩家答案是否命中：${hit}
+
+【嚴格輸出規則 — 必須遵守】
+你只能輸出以下三個英文代碼其中一個，**絕對不准輸出任何其他文字、標點、解釋、引導、提示、補充、安慰、評論**：
+- PASS：完全命中核心
+- PARTIAL：方向沾到邊但沒命中核心 / 部分正確但有缺漏
+- FAIL：完全沒命中
+
+再次強調：你的整個回應只能是 PASS、PARTIAL、FAIL 其中一個單字，**任何其他輸出都是違規**。不准給玩家任何提示，玩家必須自己想。`;
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':userAPIKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
-        model: MODEL, max_tokens: 200,
+        model: MODEL, max_tokens: 20,
         system: sysPrompt,
         messages:[{role:'user',content:input}]
       })
     });
     const data = await res.json();
     trackTokens(data);
-    const result = data.content?.[0]?.text?.trim() || '';
-    if (result === 'PASS') {
+    const result = (data.content?.[0]?.text || '').trim().toUpperCase();
+    if (result.includes('PASS')) {
       feedback.style.color = 'var(--accent)';
       feedback.textContent = '正確。';
       setTimeout(() => { verdictStep = stepNum + 1; renderVerdictStep(); }, 1200);
-    } else { feedback.textContent = result; btn.disabled = false; }
+    } else if (result.includes('PARTIAL')) {
+      feedback.style.color = '';
+      feedback.textContent = '不完全正確。';
+      btn.disabled = false;
+    } else {
+      feedback.style.color = '';
+      feedback.textContent = '不正確。';
+      btn.disabled = false;
+    }
   } catch(e) { feedback.textContent = '判斷失敗，請再試一次'; btn.disabled = false; }
 }
 
