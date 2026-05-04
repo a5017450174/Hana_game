@@ -379,6 +379,39 @@
   .lore-close{position:absolute;top:14px;right:16px;background:transparent;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:4px 8px;transition:color 0.2s;line-height:1;}
   .lore-close:hover{color:var(--text-primary);}
 
+  /* ── HELP BUTTON (floating, top-left under volume) ── */
+  #help-toggle{position:fixed;top:120px;left:16px;z-index:95;width:38px;height:38px;border-radius:50%;background:rgba(15,15,18,0.7);border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;display:none;align-items:center;justify-content:center;font-family:'Noto Serif TC',serif;font-size:17px;font-weight:300;line-height:1;transition:all 0.2s ease;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:0;letter-spacing:0;}
+  #help-toggle.visible{display:flex;}
+  #help-toggle:hover{color:var(--text-primary);border-color:var(--accent);background:rgba(15,15,18,0.9);}
+
+  /* ── HELP MODAL ── */
+  #help-modal{position:fixed;inset:0;background:rgba(10,10,12,0.94);display:flex;align-items:center;justify-content:center;z-index:220;opacity:0;pointer-events:none;transition:opacity 0.4s ease;}
+  #help-modal.show{opacity:1;pointer-events:all;}
+  .help-box{max-width:560px;width:92%;background:var(--surface);border:1px solid var(--border);padding:36px 40px 32px;position:relative;max-height:84vh;overflow-y:auto;}
+  .help-box::-webkit-scrollbar{width:3px;}
+  .help-label{font-size:13px;letter-spacing:0.4em;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;}
+  .help-title{font-family:'Noto Serif TC',serif;font-size:22px;font-weight:300;color:var(--text-primary);letter-spacing:0.15em;margin-bottom:24px;}
+  .help-tabs{display:flex;gap:2px;border-bottom:1px solid var(--border-soft);margin-bottom:24px;flex-wrap:wrap;}
+  .help-tab{flex:1;min-width:80px;padding:10px 8px;background:transparent;border:none;border-bottom:1px solid transparent;color:var(--text-muted);font-family:'Noto Sans TC',sans-serif;font-size:12px;letter-spacing:0.18em;cursor:pointer;transition:all 0.2s ease;margin-bottom:-1px;}
+  .help-tab:hover{color:var(--text-secondary);}
+  .help-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .help-section{display:none;animation:fadeIn 0.3s ease;}
+  .help-section.active{display:block;}
+  .help-section h4{font-family:'Noto Serif TC',serif;font-size:15px;font-weight:400;color:var(--text-primary);letter-spacing:0.1em;margin:18px 0 8px;}
+  .help-section h4:first-child{margin-top:0;}
+  .help-section p{font-family:'Noto Serif TC',serif;font-size:14px;line-height:2.1;color:var(--text-secondary);font-weight:300;letter-spacing:0.04em;margin-bottom:8px;}
+  .help-section em{color:var(--text-primary);font-style:normal;}
+  .help-section ul{list-style:none;padding:0;margin:6px 0 8px;}
+  .help-section li{font-family:'Noto Serif TC',serif;font-size:13.5px;line-height:1.95;color:var(--text-secondary);font-weight:300;letter-spacing:0.04em;padding-left:14px;position:relative;margin-bottom:4px;}
+  .help-section li::before{content:'·';position:absolute;left:2px;top:0;color:var(--accent);}
+  .help-tag{display:inline-block;font-size:10px;letter-spacing:0.18em;padding:2px 8px;border-radius:2px;margin-right:4px;font-family:'Noto Sans TC',sans-serif;vertical-align:middle;}
+  .help-tag.high{background:rgba(192,96,74,0.12);color:var(--rel-high);border:1px solid rgba(192,96,74,0.3);}
+  .help-tag.mid{background:var(--accent-soft);color:var(--accent);border:1px solid rgba(139,115,85,0.3);}
+  .help-tag.low{background:rgba(58,56,69,0.4);color:var(--text-muted);border:1px solid var(--border);}
+  .help-foot{margin-top:22px;padding-top:16px;border-top:1px solid var(--border-soft);font-size:11px;letter-spacing:0.18em;color:var(--text-muted);text-align:center;}
+  .help-close{position:absolute;top:14px;right:16px;background:transparent;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:4px 8px;transition:color 0.2s;line-height:1;}
+  .help-close:hover{color:var(--text-primary);}
+
   @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
   @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
   *{scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
@@ -400,9 +433,9 @@
   <div class="name-input-wrap">
     <input class="name-input" id="player-name-input" placeholder="輸入你的名字" maxlength="10" />
     <div style="margin-top:28px;">
-      <div class="name-prompt" style="font-size:12px;letter-spacing:0.1em;margin-bottom:10px;animation-delay:0.6s;">通行碼</div>
-      <input class="name-input" id="api-key-input" type="password" placeholder="請輸入通行碼" style="font-size:18px;width:200px;letter-spacing:0.2em;text-align:center;" />
-      <div class="name-hint" style="margin-top:8px;font-size:10px;line-height:1.6;">向朋友索取通行碼以開始遊戲</div>
+      <div class="name-prompt" style="font-size:12px;letter-spacing:0.1em;margin-bottom:10px;animation-delay:0.6s;">Anthropic API Key</div>
+      <input class="name-input" id="api-key-input" type="password" placeholder="sk-ant-..." style="font-size:14px;width:320px;letter-spacing:0.05em;" />
+      <div class="name-hint" style="margin-top:8px;font-size:10px;line-height:1.6;">本遊戲需要 Anthropic API Key 才能遊玩<br>請至 <a href="https://console.anthropic.com/" target="_blank" style="color:var(--accent);text-decoration:underline;">console.anthropic.com</a> 取得</div>
     </div>
     <div class="name-hint">按 Enter 或點下方繼續</div>
     <button class="name-btn" onclick="goToPrologue()">繼續</button>
@@ -565,6 +598,47 @@
   </div>
 </div>
 
+<!-- HELP TOGGLE BUTTON -->
+<button id="help-toggle" onclick="openHelp()" title="玩法說明" aria-label="玩法說明">？</button>
+
+<!-- HELP MODAL -->
+<div id="help-modal">
+  <div class="help-box">
+    <button class="help-close" onclick="closeHelp()">✕</button>
+    <div class="help-label">HOW TO PLAY</div>
+    <div class="help-title">玩法說明</div>
+
+    <div class="help-tabs">
+      <button class="help-tab active" data-help-tab="phone" onclick="switchHelpTab('phone')">手機對話</button>
+      <button class="help-tab" data-help-tab="verdict" onclick="switchHelpTab('verdict')">最終作答</button>
+    </div>
+
+    <div class="help-section active" id="help-section-phone">
+      <h4>怎麼開始對話</h4>
+      <p>點右上角的 <em>📱 手機</em>，從聯絡人裡選一個人開始聊。</p>
+
+      <h4>訊息下方的小標籤</h4>
+      <p>你每傳一句話，系統會打分標在訊息下方：</p>
+      <ul>
+        <li><span class="help-tag high">高相關</span> 切到核心。</li>
+        <li><span class="help-tag mid">中相關</span> 在邊上繞。</li>
+        <li><span class="help-tag low">弱相關</span> 跑題了。</li>
+      </ul>
+      <p>相關度可能有幻覺，不一定完全正確，不過<em>高相關幾乎跟主線有關</em>。</p>
+
+      <h4>卡關了怎麼辦</h4>
+      <p>對同一個 NPC 連續講 <em>5 句弱相關</em>的對話之後，對話框會跳出 <em>「需要提示嗎？」</em>，點它就會給你提示。</p>
+    </div>
+
+    <div class="help-section" id="help-section-verdict">
+      <h4>「進入最終作答」</h4>
+      <p>你不必蒐集所有線索才能作答，覺得自己想清楚了就可以進行最終作答的環節。</p>
+    </div>
+
+    <div class="help-foot">ESC 或點背景關閉</div>
+  </div>
+</div>
+
 <!-- VERDICT MODAL -->
 <div id="verdict-modal">
   <div class="verdict-box" id="verdict-box-container">
@@ -688,19 +762,6 @@
 
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════
-// ⚠️ 重要：把下面兩個值改成你自己的
-// ═══════════════════════════════════════════════════════════════
-//
-// 1. HARDCODED_API_KEY：你的 Anthropic API key（去 console.anthropic.com 重新產一條全新的，舊那條已經外洩請廢掉）
-// 2. ENTRY_PASSCODE：朋友打開遊戲要輸入的「通行碼」，你愛設什麼就設什麼
-//                    ⚠️ 注意：這只是 UI 把戲，沒有真的安全性，朋友按 F12 看原始碼還是看得到 key
-//                    用途：(a) 防小白瞎點開、(b) 製造一點儀式感
-//
-const HARDCODED_API_KEY = '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';
-const ENTRY_PASSCODE = '花';  // 預設通行碼，可以改成任何字串（例如 'hana'、'1234'、'小花'）
-// ═══════════════════════════════════════════════════════════════
-
 let userAPIKey = '';
 const MODEL = 'claude-sonnet-4-20250514';     // 用於主要 NPC 對話、人格分析（重視品質）
 const JUDGE_MODEL = 'claude-haiku-4-5-20251001'; // 用於相關度判斷、最終問鼎判斷器（小型分類任務，用便宜的）
@@ -1190,12 +1251,12 @@ function goToName() {
 }
 function goToPrologue() {
   const raw = document.getElementById('player-name-input').value.trim();
-  const passVal = document.getElementById('api-key-input').value.trim();
-  if (passVal !== ENTRY_PASSCODE) {
-    showToast('通行碼錯誤', true);
+  const keyVal = document.getElementById('api-key-input').value.trim();
+  if (!keyVal || !keyVal.startsWith('sk-')) {
+    showToast('請輸入有效的 Anthropic API Key（以 sk- 開頭）', true);
     return;
   }
-  userAPIKey = HARDCODED_API_KEY;
+  userAPIKey = keyVal;
   playerName = raw || '你';
   fadeOut('name-screen', () => fadeIn('prologue-screen'));
 }
@@ -1221,6 +1282,7 @@ function startGame() {
     document.getElementById('scene-mode').classList.add('visible');
     loadScene(0);
     updateProgress(); // 場景載入後立刻讓 floating 作答按鈕出現
+    showHelpToggle(); // 顯示左上的 ? 玩法說明按鈕
   });
 }
 function fadeOut(id, cb) {
@@ -2199,6 +2261,23 @@ function closeEnding() { document.getElementById('ending-overlay').classList.rem
 function openLore() { document.getElementById('lore-modal').classList.add('show'); }
 function closeLore() { document.getElementById('lore-modal').classList.remove('show'); }
 
+// ── HELP ─────────────────────────────────────────────────────────────
+function openHelp() { document.getElementById('help-modal').classList.add('show'); }
+function closeHelp() { document.getElementById('help-modal').classList.remove('show'); }
+function switchHelpTab(name) {
+  document.querySelectorAll('#help-modal .help-tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.helpTab === name);
+  });
+  document.querySelectorAll('#help-modal .help-section').forEach(s => {
+    s.classList.toggle('active', s.id === 'help-section-' + name);
+  });
+  // 切換頁籤後把內容滾回頂部，免得切過去看到一半
+  const box = document.querySelector('#help-modal .help-box');
+  if (box) box.scrollTop = 0;
+}
+function showHelpToggle() { document.getElementById('help-toggle').classList.add('visible'); }
+function hideHelpToggle() { document.getElementById('help-toggle').classList.remove('visible'); }
+
 // ── INFO TAB ─────────────────────────────────────────────────────────
 // (clue board removed; only achievement list shown)
 
@@ -2383,8 +2462,8 @@ document.addEventListener('DOMContentLoaded', () => {
   input.addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} });
   input.addEventListener('input', ()=>{ input.style.height='auto'; input.style.height=Math.min(input.scrollHeight,80)+'px'; });
   document.getElementById('player-name-input').addEventListener('keydown', e=>{ if(e.key==='Enter') goToPrologue(); });
-  document.getElementById('api-key-input').addEventListener('keydown', e=>{ if(e.key==='Enter') goToPrologue(); });
   document.getElementById('lore-modal').addEventListener('click', function(e){ if(e.target===this) closeLore(); });
+  document.getElementById('help-modal').addEventListener('click', function(e){ if(e.target===this) closeHelp(); });
   document.getElementById('fragment-popup').addEventListener('click', function(e){ if(e.target===this) closeFragment(); });
   document.getElementById('phone-overlay').addEventListener('click', function(e){ if(e.target===this) closePhone(); });
   window.downloadGameLog = function() {
@@ -2419,6 +2498,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'ArrowLeft' && document.getElementById('scene-mode').classList.contains('visible') && !document.getElementById('phone-overlay').classList.contains('show')) changeScene(-1);
     if (e.key === 'ArrowRight' && document.getElementById('scene-mode').classList.contains('visible') && !document.getElementById('phone-overlay').classList.contains('show')) changeScene(1);
     if (e.key === 'Escape') {
+      // help-modal 優先：開著的時候 ESC 只關它，避免一鍵把手機 / 線索板也一起關掉
+      if (document.getElementById('help-modal').classList.contains('show')) { closeHelp(); return; }
       if (document.getElementById('phone-overlay').classList.contains('show')) closePhone();
       if (document.getElementById('fragment-popup').classList.contains('show')) closeFragment();
       if (document.getElementById('lore-modal').classList.contains('show')) closeLore();
